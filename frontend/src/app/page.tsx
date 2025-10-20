@@ -84,13 +84,6 @@ export default function Page() {
     return "bg-red-500/10 text-red-200 ring-1 ring-red-500/30";
   }, [isConnected, isRunning]);
 
-  // Prevent any unintended page scrolling on mount
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Ensure we're at the top of the page and prevent auto-scrolling
-      window.scrollTo(0, 0);
-    }
-  }, []);
 
   const drawWaveform = useCallback(() => {
     const canvas = canvasRef.current;
