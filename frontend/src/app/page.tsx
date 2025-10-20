@@ -69,6 +69,8 @@ export default function Page() {
   const transcriptsRef = useRef<HTMLDivElement>(null);
   const containerSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const waveformCacheRef = useRef(new Map<string, number[]>());
+  const containerSizeRef = useRef({ width: 0, height: 0 });
+  const animationFrameRef = useRef<number | null>(null);
 
   const connectionLabel = useMemo(() => {
     if (isConnected) return "Connected";
