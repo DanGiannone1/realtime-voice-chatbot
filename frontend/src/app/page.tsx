@@ -66,7 +66,6 @@ export default function Page() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1m");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const containerSizeRef = useRef({ width: 0, height: 0 });
   const transcriptsRef = useRef<HTMLDivElement>(null);
   const waveformCacheRef = useRef(new Map<string, number[]>());
 
@@ -204,23 +203,19 @@ export default function Page() {
       waveformCacheRef.current.clear();
     }
 
-    const getWaveformPoints = (segment: Segment, segmentWidth: number, offset: number) => {
-      const quantizedWidth = Math.max(2, Math.round(segmentWidth / 2) * 2);
-      const quantizedSeed = Math.round(segment.start / 500);
-      const quantizedOffset = Math.round(offset * 120);
-      const key = `${segment.type}-${quantizedWidth}-${quantizedSeed}-${quantizedOffset}`;
+    const getWaveformPoints = (segment: Segment, segmentWidth: number) => {
+      const key = `${segment.start}-${segment.end}-${segment.type}-${Math.round(segmentWidth)}`;
       const cached = waveformCacheRef.current.get(key);
       if (cached) return cached;
 
-      const sampleSpacing = 4;
-      const sampleCount = Math.max(8, Math.floor(quantizedWidth / sampleSpacing));
+      const sampleSpacing = 6;
+      const sampleCount = Math.max(6, Math.floor(segmentWidth / sampleSpacing));
       const baseAmplitude = segment.type === "ai" ? 44 : segment.type === "user" ? 34 : 6;
       const variance = segment.type === "ai" ? 22 : segment.type === "user" ? 16 : 2;
       const points: number[] = [];
 
       for (let i = 0; i <= sampleCount; i += 1) {
-        const progress = offset + (i / Math.max(1, sampleCount));
-        const mixSeed = segment.start * 0.0001 + segment.end * 0.0003 + progress * 12.9898;
+        const mixSeed = segment.start * 0.0001 + segment.end * 0.0003 + i * 12.9898;
         const random = pseudoRandom(mixSeed);
         const amplitude =
           segment.type === "silence"
@@ -234,12 +229,8 @@ export default function Page() {
     };
 
     segments.forEach((segment) => {
-      const clampedStart = Math.max(segment.start, startTime);
-      const clampedEnd = Math.max(clampedStart, Math.min(segment.end, now));
-      if (clampedEnd <= startTime) return;
-
-      const segmentWidth = Math.max((clampedEnd - clampedStart) * pixelsPerMs, 2);
-      const x = paddingX + (clampedStart - startTime) * pixelsPerMs;
+      const segmentWidth = Math.max((segment.end - segment.start) * pixelsPerMs, 2);
+      const x = paddingX + (segment.start - startTime) * pixelsPerMs;
 
       if (segment.type === "silence") {
         ctx.strokeStyle = "rgba(148,163,184,0.25)";
@@ -251,9 +242,7 @@ export default function Page() {
         return;
       }
 
-      const segmentDuration = Math.max(segment.end - segment.start, 1);
-      const offset = Math.max(0, Math.min(1, (clampedStart - segment.start) / segmentDuration));
-      const waveformPoints = getWaveformPoints(segment, segmentWidth, offset);
+      const waveformPoints = getWaveformPoints(segment, segmentWidth);
       const gradient = ctx.createLinearGradient(x, centerY - 80, x, centerY + 80);
       if (segment.type === "ai") {
         gradient.addColorStop(0, "rgba(34,197,94,0.9)");
@@ -319,46 +308,7 @@ export default function Page() {
   }, [activities, currentSpeaker, timeRange]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let frameId: number;
-    const render = () => {
-      drawWaveform();
-      frameId = window.requestAnimationFrame(render);
-    };
-
-    frameId = window.requestAnimationFrame(render);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [drawWaveform]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || typeof window === "undefined") return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      containerSizeRef.current = { width: rect.width, height: rect.height };
-      drawWaveform();
-    };
-
-    updateSize();
-
-    const resizeObserver =
-      "ResizeObserver" in window
-        ? new ResizeObserver(() => {
-            updateSize();
-          })
-        : null;
-    resizeObserver?.observe(container);
-    window.addEventListener("resize", updateSize);
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
+    drawWaveform();
   }, [drawWaveform]);
 
   useEffect(() => {
@@ -447,7 +397,7 @@ export default function Page() {
                 ref={containerRef}
                 className="relative h-[22rem] w-full overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/40 to-slate-900/20"
               >
-                <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+                <canvas ref={canvasRef} className="h-full w-full" />
                 <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-inset ring-white/5" />
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-white/70">
