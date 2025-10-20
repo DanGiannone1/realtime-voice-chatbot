@@ -67,6 +67,7 @@ export default function Page() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const transcriptsRef = useRef<HTMLDivElement>(null);
+  const containerSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const waveformCacheRef = useRef(new Map<string, number[]>());
 
   const connectionLabel = useMemo(() => {
@@ -308,7 +309,73 @@ export default function Page() {
   }, [activities, currentSpeaker, timeRange]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const container = containerRef.current;
+    if (!container) {
+      return undefined;
+    }
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      if (width !== containerSizeRef.current.width || height !== containerSizeRef.current.height) {
+        containerSizeRef.current = { width, height };
+        drawWaveform();
+      }
+    };
+
+    updateSize();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver((entries) => {
+        entries.forEach((entry) => {
+          const { width, height } = entry.contentRect;
+          if (
+            width !== containerSizeRef.current.width ||
+            height !== containerSizeRef.current.height
+          ) {
+            containerSizeRef.current = { width, height };
+            drawWaveform();
+          }
+        });
+      });
+      observer.observe(container);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", updateSize);
+    return () => {
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [drawWaveform]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const MIN_FRAME_INTERVAL = 16;
+    let animationFrameId: number;
+    let lastTimestamp = performance.now();
+
+    const renderFrame = (timestamp: number) => {
+      if (timestamp - lastTimestamp >= MIN_FRAME_INTERVAL) {
+        drawWaveform();
+        lastTimestamp = timestamp;
+      }
+      animationFrameId = window.requestAnimationFrame(renderFrame);
+    };
+
     drawWaveform();
+    animationFrameId = window.requestAnimationFrame(renderFrame);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
   }, [drawWaveform]);
 
   useEffect(() => {
