@@ -9,10 +9,10 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantStyles: Record<ButtonVariant, string> = {
   default:
-    "bg-blue-500 hover:bg-blue-400 text-white transition-colors duration-200",
+    "bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 text-white shadow-[0_12px_30px_rgba(56,189,248,0.35)] transition-all duration-200 hover:brightness-105",
   outline:
-    "border border-white/10 bg-transparent hover:bg-white/5 transition-colors duration-200",
-  ghost: "bg-transparent hover:bg-white/10",
+    "border border-white/15 bg-transparent text-white hover:bg-white/10 transition-colors duration-200",
+  ghost: "bg-transparent text-white hover:bg-white/10",
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
