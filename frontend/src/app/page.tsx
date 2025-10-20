@@ -67,6 +67,7 @@ export default function Page() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const transcriptsRef = useRef<HTMLDivElement>(null);
+  const containerSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const waveformCacheRef = useRef(new Map<string, number[]>());
   const containerSizeRef = useRef({ width: 0, height: 0 });
   const animationFrameRef = useRef<number | null>(null);
@@ -310,45 +311,74 @@ export default function Page() {
   }, [activities, currentSpeaker, timeRange]);
 
   useEffect(() => {
-    // Handle window resize to update container size
-    const handleResize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        containerSizeRef.current = { width: rect.width, height: rect.height };
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    handleResize(); // Initial size
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Continuous animation loop that runs when the session is active
-    // This ensures the timeline scrolls to the left smoothly every frame
-    const animate = () => {
-      drawWaveform();
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    if (isRunning) {
-      // Start the animation loop when session is running
-      animationFrameRef.current = requestAnimationFrame(animate);
-    } else {
-      // Draw once when not running (for initial state or after stopping)
-      drawWaveform();
+    if (typeof window === "undefined") {
+      return undefined;
     }
 
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
+    const container = containerRef.current;
+    if (!container) {
+      return undefined;
+    }
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      if (width !== containerSizeRef.current.width || height !== containerSizeRef.current.height) {
+        containerSizeRef.current = { width, height };
+        drawWaveform();
       }
     };
-  }, [drawWaveform, isRunning]);
+
+    updateSize();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver((entries) => {
+        entries.forEach((entry) => {
+          const { width, height } = entry.contentRect;
+          if (
+            width !== containerSizeRef.current.width ||
+            height !== containerSizeRef.current.height
+          ) {
+            containerSizeRef.current = { width, height };
+            drawWaveform();
+          }
+        });
+      });
+      observer.observe(container);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", updateSize);
+    return () => {
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [drawWaveform]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const MIN_FRAME_INTERVAL = 16;
+    let animationFrameId: number;
+    let lastTimestamp = performance.now();
+
+    const renderFrame = (timestamp: number) => {
+      if (timestamp - lastTimestamp >= MIN_FRAME_INTERVAL) {
+        drawWaveform();
+        lastTimestamp = timestamp;
+      }
+      animationFrameId = window.requestAnimationFrame(renderFrame);
+    };
+
+    drawWaveform();
+    animationFrameId = window.requestAnimationFrame(renderFrame);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [drawWaveform]);
 
   useEffect(() => {
     const container = transcriptsRef.current;
