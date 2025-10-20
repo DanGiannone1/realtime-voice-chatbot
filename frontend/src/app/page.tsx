@@ -83,14 +83,23 @@ export default function Page() {
 
   const drawWaveform = useCallback(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const container = containerRef.current;
-    if (!canvas || !container) return;
+    if (!container) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    if (containerSizeRef.current.width === 0 || containerSizeRef.current.height === 0) {
+      const rect = container.getBoundingClientRect();
+      containerSizeRef.current = { width: rect.width, height: rect.height };
+    }
+
+    const { width, height } = containerSizeRef.current;
+    if (width === 0 || height === 0) return;
+
     const dpr = window.devicePixelRatio || 1;
-    const { width, height } = container.getBoundingClientRect();
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     if (typeof ctx.resetTransform === "function") {
@@ -153,7 +162,7 @@ export default function Page() {
     ctx.stroke();
 
     const timeline = activities
-      .filter((event) => event.timestamp >= startTime)
+      .filter((event) => event.timestamp >= startTime - 1000)
       .sort((a, b) => a.timestamp - b.timestamp);
 
     const augmented = [
