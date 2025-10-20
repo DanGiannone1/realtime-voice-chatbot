@@ -36,7 +36,7 @@ type ToolMarker = {
   x: number;
 };
 
-function useAnimationFrame(callback: () => void) {
+function useAnimationFrame(callback: () => void, isActive: boolean = true) {
   const callbackRef = useRef(callback);
 
   useEffect(() => {
@@ -44,6 +44,8 @@ function useAnimationFrame(callback: () => void) {
   }, [callback]);
 
   useEffect(() => {
+    if (!isActive) return;
+    
     let frameId: number;
     const loop = () => {
       callbackRef.current();
@@ -51,7 +53,7 @@ function useAnimationFrame(callback: () => void) {
     };
     frameId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(frameId);
-  }, []);
+  }, [isActive]);
 }
 
 export default function Page() {
@@ -196,8 +198,7 @@ export default function Page() {
 
   }, [activities, currentSpeaker, timeRange]);
 
-  useAnimationFrame(draw);
-
+  // Draw only when data changes, no animation
   useEffect(() => {
     draw();
   }, [draw]);
@@ -211,7 +212,7 @@ export default function Page() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center px-6 pb-24">
+    <main className="flex min-h-screen flex-col items-center px-6">
       <div className="w-full max-w-5xl pt-16">
         <Card className="border-white/10 bg-black/40 text-white">
           <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">

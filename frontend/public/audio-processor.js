@@ -3,6 +3,7 @@ class PCMDownsampler extends AudioWorkletProcessor {
     super();
     this.chunkSize = options?.processorOptions?.chunkSize ?? 2048;
     this.buffer = [];
+    this.processedCount = 0;
   }
 
   downsample(input) {
@@ -13,6 +14,17 @@ class PCMDownsampler extends AudioWorkletProcessor {
       downsampled[j] = input[i];
     }
     return downsampled;
+  }
+
+  float32ToPCM16(float32Array) {
+    // Convert Float32 samples to PCM16 format
+    const pcm16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      // Clamp to [-1, 1] and scale to 16-bit integer range
+      const sample = Math.max(-1, Math.min(1, float32Array[i]));
+      pcm16Array[i] = sample * 0x7FFF;
+    }
+    return pcm16Array;
   }
 
   process(inputs) {
@@ -38,8 +50,17 @@ class PCMDownsampler extends AudioWorkletProcessor {
         merged.set(chunk, offset);
         offset += chunk.length;
       }
-      this.port.postMessage(merged.buffer, [merged.buffer]);
+      
+      // Convert Float32 to PCM16 before sending
+      const pcm16Array = this.float32ToPCM16(merged);
+      this.port.postMessage(pcm16Array.buffer, [pcm16Array.buffer]);
       this.buffer = [];
+      
+      // Debug logging (only log occasionally to avoid spam)
+      this.processedCount++;
+      if (this.processedCount % 10 === 0) {
+        console.log(`Audio processor: sent chunk ${this.processedCount}, PCM16 bytes:`, pcm16Array.byteLength);
+      }
     }
 
     return true;

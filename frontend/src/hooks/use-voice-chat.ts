@@ -38,6 +38,8 @@ const SERVER_URL =
       "ws://localhost:8765"
     : "ws://localhost:8765";
 
+console.log("Using WebSocket server URL:", SERVER_URL);
+
 export function useVoiceChat(): HookState {
   const [isConnected, setIsConnected] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -89,7 +91,7 @@ export function useVoiceChat(): HookState {
           pushActivity("silence");
           break;
         case "audio_output": {
-          const data = message.data;
+          const data = message.data as unknown;
           if (typeof data === "string" && playbackRef.current) {
             aiSpeakingRef.current = true;
             setIsAISpeaking(true);
@@ -103,13 +105,13 @@ export function useVoiceChat(): HookState {
           break;
         }
         case "transcript": {
-          const payload = message.data;
-          if (payload && (payload.speaker === "user" || payload.speaker === "ai")) {
+          const payload = message.data as { speaker?: string; text?: string };
+          if (payload && (payload.speaker === "user" || payload.speaker === "ai") && payload.text) {
             setTranscripts((prev) => [
               ...prev,
               {
-                speaker: payload.speaker,
-                text: payload.text,
+                speaker: payload.speaker as "user" | "ai",
+                text: payload.text as string,
                 timestamp: Date.now(),
               },
             ]);
@@ -165,7 +167,13 @@ export function useVoiceChat(): HookState {
 
       await captureRef.current.start({
         onData: (base64) => {
-          wsClientRef.current?.send({ type: "audio_input", data: base64 });
+          console.log("Captured audio data, length:", base64.length);
+          if (wsClientRef.current) {
+            wsClientRef.current.send({ type: "audio_input", data: base64 });
+            console.log("Sent audio data to WebSocket");
+          } else {
+            console.warn("WebSocket client not available");
+          }
         },
       });
     } catch (err) {
