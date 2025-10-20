@@ -68,6 +68,8 @@ export default function Page() {
   const containerRef = useRef<HTMLDivElement>(null);
   const transcriptsRef = useRef<HTMLDivElement>(null);
   const waveformCacheRef = useRef(new Map<string, number[]>());
+  const containerSizeRef = useRef({ width: 0, height: 0 });
+  const animationFrameRef = useRef<number | null>(null);
 
   const connectionLabel = useMemo(() => {
     if (isConnected) return "Connected";
@@ -308,8 +310,45 @@ export default function Page() {
   }, [activities, currentSpeaker, timeRange]);
 
   useEffect(() => {
-    drawWaveform();
-  }, [drawWaveform]);
+    // Handle window resize to update container size
+    const handleResize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        containerSizeRef.current = { width: rect.width, height: rect.height };
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Initial size
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Continuous animation loop that runs when the session is active
+    // This ensures the timeline scrolls to the left smoothly every frame
+    const animate = () => {
+      drawWaveform();
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    if (isRunning) {
+      // Start the animation loop when session is running
+      animationFrameRef.current = requestAnimationFrame(animate);
+    } else {
+      // Draw once when not running (for initial state or after stopping)
+      drawWaveform();
+    }
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [drawWaveform, isRunning]);
 
   useEffect(() => {
     const container = transcriptsRef.current;
