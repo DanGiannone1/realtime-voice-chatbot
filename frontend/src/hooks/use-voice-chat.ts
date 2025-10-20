@@ -57,7 +57,14 @@ export function useVoiceChat(): HookState {
 
   const pushActivity = useCallback((type: ActivityEvent["type"]) => {
     const timestamp = Date.now();
-    setActivities((prev) => [...prev.slice(-300), { timestamp, type }]);
+    setActivities((prev) => {
+      const trimmed = prev.slice(-299);
+      const last = trimmed[trimmed.length - 1];
+      if (last?.type === type) {
+        return trimmed;
+      }
+      return [...trimmed, { timestamp, type }];
+    });
   }, []);
 
   useEffect(() => {
@@ -156,6 +163,7 @@ export function useVoiceChat(): HookState {
             setIsAISpeaking(false);
             if (!isUserSpeaking) {
               setCurrentSpeaker("silence");
+              pushActivity("silence");
             }
           },
         });
@@ -183,7 +191,7 @@ export function useVoiceChat(): HookState {
       await playbackRef.current?.stop();
       setIsRunning(false);
     }
-  }, [isRunning, isUserSpeaking]);
+  }, [isRunning, isUserSpeaking, pushActivity]);
 
   const stop = useCallback(async () => {
     if (!isRunning) return;
@@ -197,7 +205,8 @@ export function useVoiceChat(): HookState {
     setIsAISpeaking(false);
     setIsUserSpeaking(false);
     setCurrentSpeaker("silence");
-  }, [isRunning]);
+    pushActivity("silence");
+  }, [isRunning, pushActivity]);
 
   return useMemo(
     () => ({
