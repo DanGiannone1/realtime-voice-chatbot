@@ -84,6 +84,14 @@ export default function Page() {
     return "bg-red-500/10 text-red-200 ring-1 ring-red-500/30";
   }, [isConnected, isRunning]);
 
+  // Prevent any unintended page scrolling on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Ensure we're at the top of the page and prevent auto-scrolling
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
   const drawWaveform = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -397,23 +405,7 @@ export default function Page() {
     };
   }, [drawWaveform]);
 
-  useEffect(() => {
-    const container = transcriptsRef.current;
-    if (!container) return;
-    // Only scroll if we actually have transcripts to show
-    if (transcripts.length === 0) return;
-    
-    // Use requestAnimationFrame to ensure DOM has updated
-    requestAnimationFrame(() => {
-      if (transcripts.length === 1) {
-        // First transcript - instant scroll
-        container.scrollTop = container.scrollHeight;
-      } else {
-        // Subsequent transcripts - smooth scroll
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-      }
-    });
-  }, [transcripts]);
+
 
   const onToggle = async () => {
     if (isRunning) {
