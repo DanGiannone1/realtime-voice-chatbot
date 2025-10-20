@@ -184,3 +184,62 @@ These are infrequent events (once per speech segment), not per audio packet.
 - Audio flows continuously in both directions
 - VAD events are infrequent (once per speech segment)
 - Visualization stays in sync with what OpenAI is processing
+
+## Visualization & Timeline System
+
+### How the Timeline Works
+
+The visualizer shows a scrolling timeline that displays the last 1-5 minutes of conversation activity (user-selectable). The timeline continuously updates to show time passing, even during silence.
+
+**Timeline Behavior:**
+- **Fixed time window**: Shows the most recent N minutes (1m, 3m, or 5m)
+- **Continuous scrolling**: Timeline "pans to the left" as time passes - older events scroll off the left edge, new time appears on the right
+- **Always animating**: Updates ~60 times per second (60fps) via requestAnimationFrame, so timeline movement is smooth even during silence
+- **Visual time indicator**: A blue dashed "now" line on the right edge shows the current moment in time
+
+### Rendering Process
+
+The visualizer redraws every ~16ms (capped at 60fps):
+
+1. **Calculate time window**: 
+   - `now = Date.now()` (recalculated each frame)
+   - `startTime = now - rangeMs` (e.g., now - 60000ms for 1-minute view)
+   
+2. **Build timeline segments**:
+   - Filter activities to current time window
+   - Add silence marker at window start
+   - Add current speaker state at window end (`now`)
+   - Generate segments showing who was speaking when
+   
+3. **Render waveforms**:
+   - Silence: thin gray line
+   - User speaking: gray waveform (amplitude ~34px)
+   - AI speaking: green waveform (amplitude ~44px)
+   
+4. **Draw time markers**:
+   - Time labels show seconds remaining (e.g., "60s", "45s", "30s", "15s", "now")
+   - Blue "now" indicator line at right edge
+
+### Silence Handling
+
+To ensure time passing is always visible during silence:
+
+1. **Continuous redrawing**: requestAnimationFrame redraws ~60fps with updated `now` timestamp
+2. **Periodic markers**: Every 500ms during silence, a new silence activity event is added to the timeline
+3. **Current speaker state**: The timeline always includes the current speaker state at the `now` timestamp
+4. **Visual indicators**: Time labels and "now" line update continuously to show movement
+
+This means even if no one is speaking and no audio is flowing, the user still sees:
+- Time labels updating
+- The "now" line position (though fixed at right edge, the content scrolls left beneath it)
+- Periodic silence markers appearing on the timeline
+- The timeline appearing to scroll left as older events move out of view
+
+### Transcript Auto-Scroll
+
+The conversation transcript panel auto-scrolls to show the latest message:
+
+- **First transcript**: Instantly scrolls to bottom (no animation)
+- **Subsequent transcripts**: Smoothly scrolls to bottom using smooth scroll behavior
+- **Empty state**: No scrolling occurs (prevents unwanted page scrolling on initial load)
+- **Timing**: Uses requestAnimationFrame to ensure DOM has updated before scrolling
