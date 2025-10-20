@@ -60,12 +60,32 @@ export function useVoiceChat(): HookState {
     setActivities((prev) => {
       const trimmed = prev.slice(-299);
       const last = trimmed[trimmed.length - 1];
-      if (last?.type === type) {
+      // Allow duplicate silence events for continuous timeline updates
+      if (last?.type === type && type !== "silence") {
         return trimmed;
       }
       return [...trimmed, { timestamp, type }];
     });
   }, []);
+
+  // Periodic timeline update to show time passing during silence
+  useEffect(() => {
+    if (!isRunning || typeof window === "undefined") {
+      return undefined;
+    }
+
+    // Push a silence activity every 500ms to ensure timeline always shows time passing
+    // This creates visible markers on the timeline even during long silence periods
+    const intervalId = window.setInterval(() => {
+      if (currentSpeaker === "silence") {
+        pushActivity("silence");
+      }
+    }, 500);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isRunning, currentSpeaker, pushActivity]);
 
   useEffect(() => {
     if (typeof window === "undefined") {

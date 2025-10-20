@@ -308,6 +308,23 @@ export default function Page() {
 
     ctx.fillStyle = SILENCE_COLOR;
     ctx.fillRect(paddingX, paddingY - 6, 32, 2);
+
+    // Draw "now" indicator line to show time is passing
+    const nowX = width - paddingX;
+    ctx.strokeStyle = "rgba(59,130,246,0.6)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(nowX, paddingY);
+    ctx.lineTo(nowX, height - paddingY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Add "now" label
+    ctx.fillStyle = "rgba(59,130,246,0.8)";
+    ctx.font = "10px Inter, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText("now", nowX - 8, paddingY - 10);
   }, [activities, currentSpeaker, timeRange]);
 
   useEffect(() => {
@@ -383,11 +400,19 @@ export default function Page() {
   useEffect(() => {
     const container = transcriptsRef.current;
     if (!container) return;
-    if (transcripts.length <= 1) {
-      container.scrollTop = container.scrollHeight;
-      return;
-    }
-    container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+    // Only scroll if we actually have transcripts to show
+    if (transcripts.length === 0) return;
+    
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      if (transcripts.length === 1) {
+        // First transcript - instant scroll
+        container.scrollTop = container.scrollHeight;
+      } else {
+        // Subsequent transcripts - smooth scroll
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+    });
   }, [transcripts]);
 
   const onToggle = async () => {
