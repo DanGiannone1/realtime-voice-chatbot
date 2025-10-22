@@ -28,6 +28,8 @@ export default function WaveformVisualizer({
 }: WaveformVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
+  const wrenchPathData =
+    "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.911a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -72,7 +74,7 @@ export default function WaveformVisualizer({
         ctx.strokeStyle = "#6b7280";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(x, axisY - 6);
+        ctx.moveTo(x, axisY);
         ctx.lineTo(x, axisY + 6);
         ctx.stroke();
 
@@ -137,6 +139,10 @@ export default function WaveformVisualizer({
       if (isActive) {
         const sliceH = contentHeight();
 
+        const wrenchPath =
+          typeof Path2D !== "undefined" ? new Path2D(wrenchPathData) : null;
+        const axisY = height - axisBottomPad;
+
         while (pxAccumulator >= 1) {
           // Shift the scrolling region left by 1 px
           if (sliceH > 0 && width > 1) {
@@ -168,15 +174,56 @@ export default function WaveformVisualizer({
             barH = Math.max(2, Math.floor(maxBarH * 0.35));
           }
 
-          let color = COLOR_SILENCE;
-          if (state === "user") color = COLOR_USER;
-          else if (state === "ai") color = COLOR_AI;
-          else if (state === "tool") color = COLOR_TOOL;
+          if (state === "tool" && wrenchPath) {
+            const iconSize = 16;
+            const iconPadding = 6;
+            const iconX = Math.max(0, width - iconSize - iconPadding);
+            const iconY = Math.max(2, sliceH * 0.2);
+            const iconCenterX = iconX + iconSize / 2;
+            const lineStartY = iconY + iconSize + 2;
 
-          // Draw new 1px column at the right
-          ctx.fillStyle = color;
-          const y = Math.max(0, sliceH - barH);
-          ctx.fillRect(Math.max(0, width - 1), y, 1, barH);
+            const clearX = Math.max(0, iconX - 1);
+            const clearW = Math.min(
+              width - clearX,
+              iconSize + iconPadding + 1
+            );
+            ctx.clearRect(clearX, 0, clearW, sliceH);
+
+            ctx.save();
+            ctx.translate(iconX, iconY);
+            const scale = iconSize / 24;
+            ctx.scale(scale, scale);
+            ctx.strokeStyle = COLOR_TOOL;
+            ctx.lineWidth = 1.8 / scale;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.stroke(wrenchPath);
+            ctx.restore();
+
+            ctx.strokeStyle = COLOR_TOOL;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(iconCenterX, lineStartY);
+            ctx.lineTo(iconCenterX, axisY);
+            ctx.stroke();
+          } else if (state === "tool") {
+            ctx.strokeStyle = COLOR_TOOL;
+            ctx.lineWidth = 2;
+            const x = Math.max(0, width - 1);
+            ctx.beginPath();
+            ctx.moveTo(x, Math.max(0, sliceH * 0.2));
+            ctx.lineTo(x, axisY);
+            ctx.stroke();
+          } else {
+            let color = COLOR_SILENCE;
+            if (state === "user") color = COLOR_USER;
+            else if (state === "ai") color = COLOR_AI;
+
+            // Draw new 1px column at the right
+            ctx.fillStyle = color;
+            const y = Math.max(0, sliceH - barH);
+            ctx.fillRect(Math.max(0, width - 1), y, 1, barH);
+          }
 
           pxAccumulator -= 1;
           didDraw = true;
@@ -185,7 +232,8 @@ export default function WaveformVisualizer({
 
       // If we drew new content, refresh the axis so labels stay crisp
       if (didDraw) {
-        ctx.clearRect(0, height - axisBottomPad - 2, width, axisBottomPad + 2);
+        const axisY = height - axisBottomPad;
+        ctx.clearRect(0, axisY, width, axisBottomPad + 2);
         drawAxis();
       }
 

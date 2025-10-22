@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Square, Sparkles } from "lucide-react";
+import { Play, Square, Sparkles, Wrench } from "lucide-react";
 import WaveformVisualizer from "./components/WaveformVisualizer";
 
 interface SessionResponse {
@@ -568,7 +568,7 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <h1
               className="text-3xl font-bold tracking-tight"
-              style={{ color: "#7B9DD3" }}
+              style={{ color: "#10B981" }}
             >
               Agent Command Center
             </h1>
@@ -583,7 +583,7 @@ export default function Home() {
               disabled={isLoading}
               className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               style={{
-                backgroundColor: isConnected ? "#ef4444" : "#7B9DD3",
+                backgroundColor: isConnected ? "#ef4444" : "#10B981",
               }}
             >
               {isConnected ? (
@@ -594,7 +594,7 @@ export default function Home() {
               ) : (
                 <>
                   <Play className="h-4 w-4" />
-                  Start
+                  Start Session
                 </>
               )}
             </button>
@@ -673,7 +673,10 @@ export default function Home() {
                 <span>AI</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                <div className="flex items-center gap-1 text-amber-400">
+                  <Wrench className="h-3 w-3" />
+                  <div className="h-3 w-px bg-amber-400" />
+                </div>
                 <span>Tool Call</span>
               </div>
             </div>
