@@ -155,11 +155,19 @@ export default function Home() {
           break;
 
         case "response.audio_transcript.done":
-          setStatus("✅ Ready to listen...");
-          isAiRespondingRef.current = false;
+          // Transcript is done but audio might still be playing
+          // Don't change status here
           break;
 
+        case "response.content_part.done":
+        case "response.output_item.done":
         case "response.done":
+          // These events fire when content is generated, but audio might still be playing
+          // Don't change status here
+          break;
+
+        case "output_audio_buffer.stopped":
+          // Audio playback is actually complete
           setStatus("✅ Ready to listen...");
           isAiRespondingRef.current = false;
           break;
