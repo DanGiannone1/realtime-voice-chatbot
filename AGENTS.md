@@ -1,0 +1,1 @@
+Please run npm install from the frontend folder to start
