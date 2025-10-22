@@ -31,7 +31,7 @@ interface RealtimeEvent {
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState("Click 'Start Conversation' to begin");
+  const [status, setStatus] = useState("Click 'Start Session' to begin");
   const [transcript, setTranscript] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -292,7 +292,7 @@ export default function Home() {
     setStatus("Disconnecting...");
     cleanup();
     setIsConnected(false);
-    setStatus("Disconnected. Click 'Start' to reconnect.");
+    setStatus("Disconnected. Click 'Start Session' to reconnect.");
   };
 
   return (
@@ -301,11 +301,8 @@ export default function Home() {
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-            Azure OpenAI Voice Assistant
+            Agent Command Center
           </h1>
-          <p className="text-gray-400 text-lg">
-            WebRTC Direct Connection • GPT-4o Realtime API
-          </p>
         </div>
 
         {/* Hidden audio element */}
@@ -334,15 +331,15 @@ export default function Home() {
             disabled={isLoading}
             className={`w-full mt-4 px-8 py-4 rounded-xl text-xl font-semibold transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
               isConnected
-                ? "bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/50"
-                : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/50"
+                ? "bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/50"
+                : "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/50"
             }`}
           >
             {isLoading
               ? "Connecting..."
               : isConnected
-              ? "🛑 Stop Conversation"
-              : "🎤 Start Conversation"}
+              ? "Stop Session"
+              : "Start Session"}
           </button>
         </div>
 
@@ -354,35 +351,43 @@ export default function Home() {
               Conversation Transcript
             </h2>
             <div className="space-y-3">
-              {transcript.map((message, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg ${
-                    message.startsWith("You:")
-                      ? "bg-blue-900/30 border-l-4 border-blue-500"
-                      : "bg-purple-900/30 border-l-4 border-purple-500"
-                  }`}
-                >
-                  <p className="text-sm font-mono whitespace-pre-wrap">
-                    {message}
-                  </p>
-                </div>
-              ))}
+              {transcript.map((message, index) => {
+                const isUser = message.startsWith("You:");
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-3 ${
+                      isUser ? "justify-start" : "justify-end"
+                    }`}
+                  >
+                    {isUser && (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <span className="text-lg">👤</span>
+                      </div>
+                    )}
+                    <div
+                      className={`p-3 rounded-lg max-w-[80%] ${
+                        isUser
+                          ? "bg-blue-900/30 border-l-4 border-blue-500"
+                          : "bg-purple-900/30 border-r-4 border-purple-500"
+                      }`}
+                    >
+                      <p className="text-sm font-mono whitespace-pre-wrap">
+                        {message}
+                      </p>
+                    </div>
+                    {!isUser && (
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+                        <span className="text-lg">🤖</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="bg-gray-800/50 rounded-xl p-4 text-sm text-gray-400 border border-gray-700">
-          <h3 className="font-semibold text-white mb-2">📋 Setup Instructions:</h3>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Ensure your Azure OpenAI resource is in East US 2 or Sweden Central</li>
-            <li>Set AZURE_OPENAI_REGION environment variable to match your region</li>
-            <li>Backend will use the correct regional WebRTC endpoint automatically</li>
-            <li>Click "Start Conversation" and allow microphone access</li>
-            <li>Voice Activity Detection (VAD) handles turn-taking automatically</li>
-          </ul>
-        </div>
       </div>
     </main>
   );
