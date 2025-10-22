@@ -5,6 +5,7 @@ import { useEffect, useRef, MutableRefObject } from "react";
 interface WaveformVisualizerProps {
   isUserSpeakingRef: MutableRefObject<boolean>;
   isAiSpeakingRef: MutableRefObject<boolean>;
+  isToolRunningRef: MutableRefObject<boolean>;
   /** Seconds visible in the chart (60 = 1m, 180 = 3m, 300 = 5m) */
   timeWindow?: number;
   /** Optional WebAudio analysers for mic and remote audio */
@@ -14,11 +15,12 @@ interface WaveformVisualizerProps {
   isActive?: boolean;
 }
 
-type State = "silence" | "user" | "ai";
+type State = "silence" | "user" | "ai" | "tool";
 
 export default function WaveformVisualizer({
   isUserSpeakingRef,
   isAiSpeakingRef,
+  isToolRunningRef,
   timeWindow = 60,
   userAnalyser,
   aiAnalyser,
@@ -115,6 +117,7 @@ export default function WaveformVisualizer({
     // Colors to match legend
     const COLOR_USER = "#9CA3AF";    // gray (You)
     const COLOR_AI = "#10B981";      // emerald (AI)
+    const COLOR_TOOL = "#F59E0B";    // amber (tool)
     const COLOR_SILENCE = "#2D3748"; // subtle slate
 
     const render = () => {
@@ -149,20 +152,26 @@ export default function WaveformVisualizer({
           // State decision: prefer explicit flags, fall back to RMS
           const VOICE_THRESHOLD = 0.04;
           let state: State = "silence";
-          if (isUserSpeakingRef.current || userR > VOICE_THRESHOLD) state = "user";
+          if (isToolRunningRef.current) state = "tool";
+          else if (isUserSpeakingRef.current || userR > VOICE_THRESHOLD)
+            state = "user";
           else if (isAiSpeakingRef.current || aiR > VOICE_THRESHOLD) state = "ai";
 
           // Map loudness to visual height (soft curve)
           const loud = Math.max(userR, aiR);
           const normalized = Math.min(1, Math.pow(loud * 1.8, 0.8));
           const maxBarH = Math.max(2, sliceH - 6);
-          const barH =
-            state === "silence"
-              ? 2 // keep a minimal baseline in active mode
-              : Math.max(2, Math.floor(normalized * maxBarH));
+          let barH = 2;
+          if (state === "user" || state === "ai") {
+            barH = Math.max(2, Math.floor(normalized * maxBarH));
+          } else if (state === "tool") {
+            barH = Math.max(2, Math.floor(maxBarH * 0.35));
+          }
 
-          const color =
-            state === "user" ? COLOR_USER : state === "ai" ? COLOR_AI : COLOR_SILENCE;
+          let color = COLOR_SILENCE;
+          if (state === "user") color = COLOR_USER;
+          else if (state === "ai") color = COLOR_AI;
+          else if (state === "tool") color = COLOR_TOOL;
 
           // Draw new 1px column at the right
           ctx.fillStyle = color;
@@ -197,7 +206,15 @@ export default function WaveformVisualizer({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", onResize);
     };
-  }, [timeWindow, userAnalyser, aiAnalyser, isUserSpeakingRef, isAiSpeakingRef, isActive]);
+  }, [
+    timeWindow,
+    userAnalyser,
+    aiAnalyser,
+    isUserSpeakingRef,
+    isAiSpeakingRef,
+    isToolRunningRef,
+    isActive,
+  ]);
 
   return <canvas ref={canvasRef} className="h-full w-full" style={{ display: "block" }} />;
 }

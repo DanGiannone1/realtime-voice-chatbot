@@ -23,11 +23,15 @@ interface RealtimeEvent {
   event_id?: string;
   transcript?: string;
   delta?: string;
+  item?: any;
   error?: {
     type: string;
     code: string;
     message: string;
   };
+  call_id?: string;
+  name?: string;
+  arguments?: string;
   [key: string]: any;
 }
 
@@ -58,11 +62,15 @@ export default function Home() {
   // Instant flags for the visualizer
   const isUserSpeakingRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
+  const isToolRunningRef = useRef(false);
 
   // WebAudio bits for visualization (cheap, optional)
   const audioCtxRef = useRef<AudioContext | null>(null);
   const userAnalyserRef = useRef<AnalyserNode | null>(null);
   const aiAnalyserRef = useRef<AnalyserNode | null>(null);
+  const pendingToolCallsRef = useRef<
+    Record<string, { name: string; args: string }>
+  >({});
 
   useEffect(() => {
     return () => {
@@ -109,6 +117,8 @@ export default function Home() {
     }
     userAnalyserRef.current = null;
     aiAnalyserRef.current = null;
+    pendingToolCallsRef.current = {};
+    isToolRunningRef.current = false;
   };
 
   const getTimestamp = () => {
@@ -121,10 +131,47 @@ export default function Home() {
     });
   };
 
+  function safeParseJSON<T = any>(
+    s: string | undefined | null,
+    fallback: T = {} as any
+  ): T {
+    try {
+      return s ? (JSON.parse(s) as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  async function getWeather(city: string) {
+    const geo = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?count=1&name=${encodeURIComponent(
+        city
+      )}`
+    ).then((r) => r.json());
+    if (!geo?.results?.length) {
+      return { ok: false, error: `City not found: ${city}` };
+    }
+    const { latitude, longitude, name, country } = geo.results[0];
+
+    const wx = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+    ).then((r) => r.json());
+
+    const current = wx?.current_weather ?? {};
+    return {
+      ok: true,
+      city: name,
+      country,
+      latitude,
+      longitude,
+      current_weather: current,
+    };
+  }
+
   const handleDataChannelMessage = (event: MessageEvent) => {
     try {
       const realtimeEvent: RealtimeEvent = JSON.parse(event.data);
-      console.log("📨 Server event:", realtimeEvent.type, realtimeEvent);
+      // console.log("📨 Server event:", realtimeEvent.type, realtimeEvent);
 
       switch (realtimeEvent.type) {
         case "session.created":
@@ -200,13 +247,11 @@ export default function Home() {
           break;
 
         case "response.audio_transcript.done":
-          // Transcript finished; audio may still be playing
           break;
 
         case "response.content_part.done":
         case "response.output_item.done":
         case "response.done":
-          // Content generated; wait for output_audio_buffer.stopped
           break;
 
         case "output_audio_buffer.stopped":
@@ -215,6 +260,90 @@ export default function Home() {
           setIsAiSpeaking(false);
           isAiRespondingRef.current = false;
           break;
+
+        case "response.output_item.added": {
+          const it = realtimeEvent.item;
+          if (it?.type === "function_call") {
+            const callId = it.call_id;
+            if (callId) {
+              pendingToolCallsRef.current[callId] = {
+                name: it.name ?? "unknown_tool",
+                args: "",
+              };
+              isToolRunningRef.current = true;
+              setStatus(
+                it.name
+                  ? `🛠️ Running tool: ${it.name}`
+                  : "🛠️ Running tool..."
+              );
+            }
+          }
+          break;
+        }
+
+        case "response.function_call_arguments.delta": {
+          const { call_id, delta } = realtimeEvent;
+          if (call_id) {
+            const entry =
+              pendingToolCallsRef.current[call_id] ?? { name: "", args: "" };
+            entry.args += delta ?? "";
+            pendingToolCallsRef.current[call_id] = entry;
+          }
+          break;
+        }
+
+        case "response.function_call_arguments.done": {
+          const { call_id } = realtimeEvent;
+          if (!call_id) {
+            break;
+          }
+          const entry = pendingToolCallsRef.current[call_id];
+          const fnName = entry?.name || realtimeEvent.name || "unknown_tool";
+          const finalArgsString =
+            entry?.args || realtimeEvent.arguments || "{}";
+          const args = safeParseJSON<{ city?: string }>(finalArgsString, {});
+
+          (async () => {
+            let result: any = { ok: false, error: "No tool executed" };
+
+            try {
+              if (fnName === "get_weather") {
+                const city = args.city ?? "";
+                result = await getWeather(city);
+              } else {
+                result = { ok: false, error: `Unknown tool: ${fnName}` };
+              }
+            } catch (err: any) {
+              result = { ok: false, error: String(err) };
+            }
+
+            if (dataChannelRef.current) {
+              dataChannelRef.current.send(
+                JSON.stringify({
+                  type: "conversation.item.create",
+                  item: {
+                    type: "function_call_output",
+                    call_id,
+                    output: JSON.stringify(result),
+                  },
+                })
+              );
+
+              dataChannelRef.current.send(
+                JSON.stringify({ type: "response.create" })
+              );
+            }
+
+            delete pendingToolCallsRef.current[call_id];
+            if (Object.keys(pendingToolCallsRef.current).length === 0) {
+              isToolRunningRef.current = false;
+            }
+
+            setStatus("🤖 AI is responding...");
+          })();
+
+          break;
+        }
 
         case "error":
           console.error("❌ Server error:", realtimeEvent.error);
@@ -296,6 +425,29 @@ export default function Home() {
 
       dataChannel.addEventListener("open", () => {
         console.log("📡 Data channel opened");
+
+        dataChannel.send(
+          JSON.stringify({
+            type: "session.update",
+            session: {
+              tool_choice: "auto",
+              tools: [
+                {
+                  type: "function",
+                  name: "get_weather",
+                  description: "Get current weather by city name",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      city: { type: "string", description: "City name" },
+                    },
+                    required: ["city"],
+                  },
+                },
+              ],
+            },
+          })
+        );
       });
 
       dataChannel.addEventListener("message", handleDataChannelMessage);
@@ -497,6 +649,7 @@ export default function Home() {
             <WaveformVisualizer
               isUserSpeakingRef={isUserSpeakingRef}
               isAiSpeakingRef={isAiSpeakingRef}
+              isToolRunningRef={isToolRunningRef}
               timeWindow={
                 selectedTimeRange === "1m"
                   ? 60
