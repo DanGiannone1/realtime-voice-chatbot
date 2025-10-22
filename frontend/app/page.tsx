@@ -311,14 +311,19 @@ export default function Home() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="max-w-4xl w-full space-y-6">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#050b18] via-[#040615] to-[#010109] px-6 py-10 text-white">
+      <div className="w-full max-w-5xl space-y-8">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-fuchsia-500 text-transparent bg-clip-text">
-            Agent Command Center
+        <div className="space-y-3 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.35em] text-slate-300/80">
+            Realtime Control
+          </div>
+          <h1 className="text-4xl font-semibold text-white md:text-5xl">
+            <span className="bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500 bg-clip-text text-transparent">
+              Agent Command Center
+            </span>
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-sm text-slate-400 md:text-base">
             WebRTC Direct Connection • GPT-4o Realtime API
           </p>
         </div>
@@ -327,85 +332,100 @@ export default function Home() {
         <audio ref={audioElementRef} autoPlay />
 
         {/* Status Card */}
-        <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  isConnected
-                    ? "bg-purple-400 animate-pulse"
-                    : "bg-slate-500"
-                }`}
-              />
-              <span className="font-semibold">
-                {isConnected ? "Connected" : "Disconnected"}
+        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.1fr_1fr]">
+          <div className="rounded-3xl border border-white/10 bg-[#0b1020]/80 p-6 shadow-[0_35px_120px_-60px_rgba(59,130,246,0.5)] backdrop-blur">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-2.5 w-2.5 rounded-full ${
+                    isConnected ? "bg-sky-400 animate-pulse" : "bg-slate-600"
+                  }`}
+                />
+                <span className="text-sm font-medium tracking-wide text-slate-200">
+                  {isConnected ? "Live" : "Standby"}
+                </span>
+              </div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">
+                {isConnected ? "Session Active" : "Awaiting Start"}
               </span>
             </div>
+
+            <p className="text-center text-sm text-slate-300 md:text-base">{status}</p>
+
+            {/* Control Button */}
+            <button
+              onClick={isConnected ? stopConversation : startConversation}
+              disabled={isLoading}
+              className={`mt-6 w-full rounded-2xl px-10 py-4 text-lg font-semibold tracking-wide transition-all duration-200 ease-out hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                isConnected
+                  ? "bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 shadow-[0_20px_45px_-25px_rgba(168,85,247,0.8)] hover:from-fuchsia-500 hover:via-purple-500 hover:to-indigo-500"
+                  : "bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 shadow-[0_20px_45px_-25px_rgba(56,189,248,0.8)] hover:from-sky-400 hover:via-indigo-500 hover:to-purple-500"
+              }`}
+            >
+              {isLoading
+                ? "Connecting..."
+                : isConnected
+                ? "⏹ End Session"
+                : "🚀 Start Session"}
+            </button>
           </div>
 
-          <p className="text-gray-300 text-center py-2">{status}</p>
-
-          {/* Control Button */}
-          <button
-            onClick={isConnected ? stopConversation : startConversation}
-            disabled={isLoading}
-            className={`w-full mt-4 px-8 py-4 rounded-xl text-xl font-semibold transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-              isConnected
-                ? "bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 shadow-lg shadow-purple-500/50"
-                : "bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-blue-500/40"
-            }`}
-          >
-            {isLoading
-              ? "Connecting..."
-              : isConnected
-              ? "⏹ End Session"
-              : "🚀 Start Session"}
-          </button>
-        </div>
+          {/* Visualization */}
+          <div className="rounded-3xl border border-white/10 bg-[#0a0f1c]/80 p-6 shadow-[0_45px_140px_-80px_rgba(14,116,144,0.8)] backdrop-blur">
+            <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+              <span>Audio Visualization</span>
+              <span>Waveform</span>
+            </div>
+            <div className="flex h-48 items-center justify-center rounded-2xl border border-white/5 bg-gradient-to-br from-[#0b1224] via-[#050912] to-[#02040b] text-[0.7rem] uppercase tracking-[0.4em] text-slate-600">
+              awaiting signal
+            </div>
+          </div>
+        </section>
 
         {/* Transcript Card */}
         {transcript.length > 0 && (
-          <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700 max-h-96 overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <span>💬</span>
+          <div className="rounded-3xl border border-white/10 bg-[#090f1d]/80 p-6 shadow-[0_45px_160px_-90px_rgba(79,70,229,0.8)] backdrop-blur">
+            <h2 className="mb-6 flex items-center gap-3 text-lg font-semibold text-slate-200">
+              <span className="text-xl">💬</span>
               Conversation Transcript
             </h2>
-            <div className="space-y-4">
-              {transcript.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${
-                    message.role === "ai" ? "justify-end" : "justify-start"
-                  }`}
-                >
+            <div className="space-y-5 overflow-y-auto pr-1 max-h-[28rem]">
+              {transcript.map((message, index) => {
+                const isAi = message.role === "ai";
+                return (
                   <div
-                    className={`flex max-w-xl items-start gap-3 ${
-                      message.role === "ai" ? "flex-row-reverse text-right" : ""
-                    }`}
+                    key={index}
+                    className={`flex ${isAi ? "justify-start" : "justify-end"}`}
                   >
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border ${
-                        message.role === "ai"
-                          ? "border-purple-400/60 bg-purple-500/20 text-purple-200"
-                          : "border-blue-400/60 bg-blue-500/20 text-blue-200"
+                      className={`flex max-w-2xl items-end gap-3 ${
+                        isAi ? "flex-row" : "flex-row-reverse"
                       }`}
                     >
-                      {message.role === "ai" ? "🤖" : "🧑"}
-                    </div>
-                    <div
-                      className={`rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm ${
-                        message.role === "ai"
-                          ? "bg-gradient-to-l from-purple-500/20 to-indigo-500/10 border border-purple-400/40"
-                          : "bg-gradient-to-r from-blue-500/20 to-cyan-500/10 border border-blue-400/40"
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed text-gray-100 whitespace-pre-wrap">
-                        {message.content}
-                      </p>
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full border ${
+                          isAi
+                            ? "border-indigo-400/40 bg-indigo-500/10 text-indigo-200"
+                            : "border-sky-400/40 bg-sky-500/10 text-sky-200"
+                        }`}
+                      >
+                        {isAi ? "✨" : "🧑"}
+                      </div>
+                      <div
+                        className={`rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-[0_18px_60px_-45px_rgba(99,102,241,0.7)] backdrop-blur ${
+                          isAi
+                            ? "bg-gradient-to-r from-[#0f172a]/90 via-[#111a2f]/70 to-[#0b1224]/60 text-slate-200"
+                            : "bg-gradient-to-l from-sky-500/20 via-sky-500/10 to-cyan-400/10 text-slate-100"
+                        } ${isAi ? "border border-indigo-400/20" : "border border-sky-400/20"}`}
+                      >
+                        <p className="whitespace-pre-wrap text-[0.95rem] text-slate-100">
+                          {message.content}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
