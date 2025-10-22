@@ -34,6 +34,7 @@ type TranscriptRole = "user" | "ai";
 interface TranscriptMessage {
   role: TranscriptRole;
   content: string;
+  timestamp: string;
 }
 
 export default function Home() {
@@ -41,11 +42,21 @@ export default function Home() {
   const [status, setStatus] = useState("Click 'Start Session' to begin");
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRange, setSelectedRange] = useState("1m");
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  const getTimestamp = () =>
+    new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+  const timeRanges = ["1m", "3m", "5m"];
 
   useEffect(() => {
     return () => {
@@ -100,7 +111,11 @@ export default function Home() {
           if (realtimeEvent.transcript) {
             setTranscript((prev) => [
               ...prev,
-              { role: "user", content: realtimeEvent.transcript ?? "" },
+              {
+                role: "user",
+                content: realtimeEvent.transcript ?? "",
+                timestamp: getTimestamp(),
+              },
             ]);
             setStatus("🤖 AI is responding...");
           }
@@ -120,7 +135,11 @@ export default function Home() {
               }
               return [
                 ...prev,
-                { role: "ai", content: realtimeEvent.delta ?? "" },
+                {
+                  role: "ai",
+                  content: realtimeEvent.delta ?? "",
+                  timestamp: getTimestamp(),
+                },
               ];
             });
           }
@@ -311,124 +330,148 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#050b18] via-[#040615] to-[#010109] px-6 py-10 text-white">
-      <div className="w-full max-w-5xl space-y-8">
-        {/* Header */}
-        <div className="space-y-3 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.35em] text-slate-300/80">
-            Realtime Control
-          </div>
-          <h1 className="text-4xl font-semibold text-white md:text-5xl">
-            <span className="bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500 bg-clip-text text-transparent">
-              Agent Command Center
-            </span>
-          </h1>
-          <p className="text-sm text-slate-400 md:text-base">
-            WebRTC Direct Connection • GPT-4o Realtime API
-          </p>
+    <main className="flex min-h-screen w-full bg-gradient-to-b from-black to-[#1A1A1A] p-6 text-white">
+      <div className="flex w-full gap-6">
+        <div className="flex flex-1 flex-col gap-6">
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-[#7B9DD3]">
+                Agent Command Center
+              </h1>
+              <p className="mt-2 text-sm text-[#9ca3af]">
+                WebRTC Direct Connection • GPT-4o Realtime API
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={isConnected ? stopConversation : startConversation}
+                disabled={isLoading}
+                className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-70 ${
+                  isConnected ? "bg-[#ef4444] hover:bg-[#dc2626]" : "bg-[#7B9DD3] hover:bg-[#6B8DC3]"
+                }`}
+              >
+                <span aria-hidden className="text-base">
+                  {isConnected ? "■" : "▶"}
+                </span>
+                {isLoading ? "Connecting..." : isConnected ? "Stop" : "Start"}
+              </button>
+              {timeRanges.map((range) => (
+                <button
+                  key={range}
+                  type="button"
+                  onClick={() => setSelectedRange(range)}
+                  className={`rounded-md px-3 py-2 text-sm font-medium shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-colors duration-200 ${
+                    selectedRange === range
+                      ? "bg-[#5B7DB3]"
+                      : "bg-[#7B9DD3] hover:bg-[#6B8DC3]"
+                  }`}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+          </header>
+
+          <audio ref={audioElementRef} autoPlay playsInline className="hidden" />
+
+          <section className="flex flex-col gap-6">
+            <div className="rounded-lg border border-[#333333] bg-gradient-to-b from-[#050505] to-[#111111] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5),0_2px_4px_-1px_rgba(0,0,0,0.06)]">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Audio Visualization</h2>
+                  <p className="mt-2 text-sm text-[#9ca3af]">{status}</p>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-[#9ca3af]">
+                  <span
+                    className={`inline-flex h-2.5 w-2.5 rounded-full ${
+                      isConnected ? "bg-[#10b981]" : "bg-[#374151]"
+                    }`}
+                  />
+                  <span>{isConnected ? "Live" : "Standby"}</span>
+                </div>
+              </div>
+              <div className="mt-6 flex flex-col rounded-md border border-dashed border-[#333333] bg-black/60 p-4">
+                <div className="flex flex-1 items-center justify-center text-xs uppercase tracking-[0.35em] text-[#6b7280]">
+                  awaiting signal
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs text-[#9ca3af]">
+                  <span>0:00 / 0:00</span>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#6b7280]" />
+                      <span>You</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#10b981]" />
+                      <span>AI</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
+                      <span>Tool</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-between text-xs uppercase tracking-widest text-[#6b7280]">
+                  {['60s', '45s', '30s', '15s', 'now'].map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex min-h-[16rem] flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-[#050505] to-[#111111] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5),0_2px_4px_-1px_rgba(0,0,0,0.06)]">
+              <h2 className="text-xl font-semibold text-white">Agent Telemetry</h2>
+              <div className="mt-6 flex flex-1 items-center justify-center rounded-md border border-dashed border-[#333333] bg-black/40 text-sm text-[#6b7280]">
+                Telemetry data will appear here
+              </div>
+            </div>
+          </section>
         </div>
 
-        {/* Hidden audio element */}
-        <audio ref={audioElementRef} autoPlay />
-
-        {/* Status Card */}
-        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.1fr_1fr]">
-          <div className="rounded-3xl border border-white/10 bg-[#0b1020]/80 p-6 shadow-[0_35px_120px_-60px_rgba(59,130,246,0.5)] backdrop-blur">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    isConnected ? "bg-sky-400 animate-pulse" : "bg-slate-600"
-                  }`}
-                />
-                <span className="text-sm font-medium tracking-wide text-slate-200">
-                  {isConnected ? "Live" : "Standby"}
-                </span>
+        <aside className="flex h-[calc(100vh-3rem)] w-96 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-[#050505] to-[#111111] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5),0_2px_4px_-1px_rgba(0,0,0,0.06)]">
+          <h2 className="text-xl font-semibold text-white">Conversation Transcript</h2>
+          <div className="mt-4 flex-1 overflow-y-auto pr-2">
+            {transcript.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-center text-sm text-[#6b7280]">
+                Start the conversation to see transcripts here
               </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">
-                {isConnected ? "Session Active" : "Awaiting Start"}
-              </span>
-            </div>
-
-            <p className="text-center text-sm text-slate-300 md:text-base">{status}</p>
-
-            {/* Control Button */}
-            <button
-              onClick={isConnected ? stopConversation : startConversation}
-              disabled={isLoading}
-              className={`mt-6 w-full rounded-2xl px-10 py-4 text-lg font-semibold tracking-wide transition-all duration-200 ease-out hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
-                isConnected
-                  ? "bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 shadow-[0_20px_45px_-25px_rgba(168,85,247,0.8)] hover:from-fuchsia-500 hover:via-purple-500 hover:to-indigo-500"
-                  : "bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 shadow-[0_20px_45px_-25px_rgba(56,189,248,0.8)] hover:from-sky-400 hover:via-indigo-500 hover:to-purple-500"
-              }`}
-            >
-              {isLoading
-                ? "Connecting..."
-                : isConnected
-                ? "⏹ End Session"
-                : "🚀 Start Session"}
-            </button>
-          </div>
-
-          {/* Visualization */}
-          <div className="rounded-3xl border border-white/10 bg-[#0a0f1c]/80 p-6 shadow-[0_45px_140px_-80px_rgba(14,116,144,0.8)] backdrop-blur">
-            <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
-              <span>Audio Visualization</span>
-              <span>Waveform</span>
-            </div>
-            <div className="flex h-48 items-center justify-center rounded-2xl border border-white/5 bg-gradient-to-br from-[#0b1224] via-[#050912] to-[#02040b] text-[0.7rem] uppercase tracking-[0.4em] text-slate-600">
-              awaiting signal
-            </div>
-          </div>
-        </section>
-
-        {/* Transcript Card */}
-        {transcript.length > 0 && (
-          <div className="rounded-3xl border border-white/10 bg-[#090f1d]/80 p-6 shadow-[0_45px_160px_-90px_rgba(79,70,229,0.8)] backdrop-blur">
-            <h2 className="mb-6 flex items-center gap-3 text-lg font-semibold text-slate-200">
-              <span className="text-xl">💬</span>
-              Conversation Transcript
-            </h2>
-            <div className="space-y-5 overflow-y-auto pr-1 max-h-[28rem]">
-              {transcript.map((message, index) => {
-                const isAi = message.role === "ai";
-                return (
-                  <div
-                    key={index}
-                    className={`flex ${isAi ? "justify-start" : "justify-end"}`}
-                  >
-                    <div
-                      className={`flex max-w-2xl items-end gap-3 ${
-                        isAi ? "flex-row" : "flex-row-reverse"
-                      }`}
-                    >
+            ) : (
+              <div className="flex flex-col gap-4">
+                {transcript.map((message, index) => {
+                  const isAi = message.role === "ai";
+                  return (
+                    <div key={index} className={`flex ${isAi ? 'justify-start' : 'justify-end'}`}>
                       <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border ${
+                        className={`max-w-[85%] rounded-lg border p-3 shadow-[0_2px_4px_rgba(0,0,0,0.5)] ${
                           isAi
-                            ? "border-indigo-400/40 bg-indigo-500/10 text-indigo-200"
-                            : "border-sky-400/40 bg-sky-500/10 text-sky-200"
+                            ? 'border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.1)]'
+                            : 'border-[#333333] bg-[#374151]'
                         }`}
                       >
-                        {isAi ? "✨" : "🧑"}
-                      </div>
-                      <div
-                        className={`rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-[0_18px_60px_-45px_rgba(99,102,241,0.7)] backdrop-blur ${
-                          isAi
-                            ? "bg-gradient-to-r from-[#0f172a]/90 via-[#111a2f]/70 to-[#0b1224]/60 text-slate-200"
-                            : "bg-gradient-to-l from-sky-500/20 via-sky-500/10 to-cyan-400/10 text-slate-100"
-                        } ${isAi ? "border border-indigo-400/20" : "border border-sky-400/20"}`}
-                      >
-                        <p className="whitespace-pre-wrap text-[0.95rem] text-slate-100">
+                        <div
+                          className={`mb-1 flex items-center text-xs font-mono text-[#9ca3af]/70 ${
+                            isAi ? 'justify-start' : 'justify-end'
+                          }`}
+                        >
+                          {isAi && (
+                            <span className="mr-2 inline-flex h-3 w-3 items-center justify-center text-[#10b981]">
+                              ✦
+                            </span>
+                          )}
+                          <span>{message.timestamp}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">
                           {message.content}
                         </p>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </aside>
       </div>
     </main>
   );
