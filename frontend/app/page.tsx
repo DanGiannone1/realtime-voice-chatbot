@@ -43,11 +43,13 @@ export default function Home() {
   const [status, setStatus] = useState("Click 'Start Session' to begin");
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<'1m' | '3m' | '5m'>('1m');
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const isAiRespondingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -119,6 +121,7 @@ export default function Home() {
               },
             ]);
             setStatus("🤖 AI is responding...");
+            isAiRespondingRef.current = true;
           }
           break;
 
@@ -126,7 +129,8 @@ export default function Home() {
           if (realtimeEvent.delta) {
             setTranscript((prev) => {
               const lastIndex = prev.length - 1;
-              if (lastIndex >= 0 && prev[lastIndex].role === "ai") {
+              // Only append to last message if it's AI AND we're currently in an AI response
+              if (lastIndex >= 0 && prev[lastIndex].role === "ai" && isAiRespondingRef.current) {
                 const updated = [...prev];
                 updated[lastIndex] = {
                   ...updated[lastIndex],
@@ -134,24 +138,30 @@ export default function Home() {
                 };
                 return updated;
               }
-              return [
-                ...prev,
-                { 
-                  role: "ai", 
-                  content: realtimeEvent.delta ?? "",
-                  timestamp: getTimestamp()
-                },
-              ];
+              // Create new AI message only if we're in AI responding mode
+              if (isAiRespondingRef.current) {
+                return [
+                  ...prev,
+                  { 
+                    role: "ai", 
+                    content: realtimeEvent.delta ?? "",
+                    timestamp: getTimestamp()
+                  },
+                ];
+              }
+              return prev;
             });
           }
           break;
 
         case "response.audio_transcript.done":
           setStatus("✅ Ready to listen...");
+          isAiRespondingRef.current = false;
           break;
 
         case "response.done":
           setStatus("✅ Ready to listen...");
+          isAiRespondingRef.current = false;
           break;
 
         case "error":
@@ -327,11 +337,12 @@ export default function Home() {
     setStatus("Disconnecting...");
     cleanup();
     setIsConnected(false);
+    isAiRespondingRef.current = false;
     setStatus("Disconnected. Click 'Start Session' to reconnect.");
   };
 
   return (
-    <main className="flex h-screen gap-6 bg-gradient-to-b from-black to-[#1A1A1A] p-6 text-white">
+    <main className="flex h-screen gap-6 bg-black p-6 text-white">
       {/* Hidden audio element */}
       <audio ref={audioElementRef} autoPlay />
 
@@ -339,9 +350,15 @@ export default function Home() {
       <div className="flex flex-1 flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#7B9DD3' }}>
-            Agent Command Center
-          </h1>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#7B9DD3' }}>
+              Agent Command Center
+            </h1>
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4" style={{ color: '#10b981' }} />
+              <p className="text-slate-400">{status}</p>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={isConnected ? stopConversation : startConversation}
@@ -364,32 +381,40 @@ export default function Home() {
               )}
             </button>
             <button
+              onClick={() => setSelectedTimeRange('1m')}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: '#7B9DD3' }}
+              style={{ 
+                backgroundColor: selectedTimeRange === '1m' ? '#7B9DD3' : '#374151',
+                opacity: selectedTimeRange === '1m' ? 1 : 0.6
+              }}
             >
               1m
             </button>
             <button
+              onClick={() => setSelectedTimeRange('3m')}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: '#7B9DD3' }}
+              style={{ 
+                backgroundColor: selectedTimeRange === '3m' ? '#7B9DD3' : '#374151',
+                opacity: selectedTimeRange === '3m' ? 1 : 0.6
+              }}
             >
               3m
             </button>
             <button
+              onClick={() => setSelectedTimeRange('5m')}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: '#7B9DD3' }}
+              style={{ 
+                backgroundColor: selectedTimeRange === '5m' ? '#7B9DD3' : '#374151',
+                opacity: selectedTimeRange === '5m' ? 1 : 0.6
+              }}
             >
               5m
             </button>
           </div>
         </div>
 
-        <p className="text-sm text-slate-400">
-          WebRTC Direct Connection • GPT-4o Realtime API
-        </p>
-
         {/* Visualization Panel */}
-        <div className="flex h-64 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-black to-[#1A1A1A] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+        <div className="flex h-64 flex-col rounded-lg border border-[#333333] bg-black p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
           <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider text-gray-500">
             <span>Audio Visualization</span>
             <span>Waveform</span>
@@ -417,16 +442,16 @@ export default function Home() {
         </div>
 
         {/* Agent Telemetry Panel */}
-        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-black to-[#1A1A1A] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] bg-black p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
           <h2 className="mb-4 text-xl font-semibold">Agent Telemetry</h2>
           <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
-            <p>{status}</p>
+            <p>Disconnected. Click 'Start Session' to reconnect.</p>
           </div>
         </div>
       </div>
 
       {/* Right Column - Conversation Transcript */}
-      <div className="flex w-96 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-black to-[#1A1A1A] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+      <div className="flex w-96 flex-col rounded-lg border border-[#333333] bg-black p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
         <h2 className="mb-4 text-xl font-semibold">Conversation Transcript</h2>
         
         {transcript.length === 0 ? (
@@ -450,7 +475,7 @@ export default function Home() {
                     }`}
                   >
                     <div className="mb-1 flex items-center gap-1 font-mono text-xs opacity-70" style={{ color: '#9ca3af' }}>
-                      {isAi && <Sparkles className="h-3 w-3" style={{ color: '#10b981' }} />}
+                      {isAi && <Sparkles className="h-5 w-5" style={{ color: '#10b981' }} />}
                       <span>{message.timestamp}</span>
                     </div>
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">
