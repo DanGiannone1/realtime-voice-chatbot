@@ -414,7 +414,7 @@ export default function Home() {
         </div>
 
         {/* Visualization Panel */}
-        <div className="flex h-64 flex-col rounded-lg border border-[#333333] bg-black p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+        <div className="flex h-64 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]" style={{ background: 'linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)' }}>
           <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider text-gray-500">
             <span>Audio Visualization</span>
             <span>Waveform</span>
@@ -442,7 +442,7 @@ export default function Home() {
         </div>
 
         {/* Agent Telemetry Panel */}
-        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] bg-black p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]" style={{ background: 'linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)' }}>
           <h2 className="mb-4 text-xl font-semibold">Agent Telemetry</h2>
           <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
             <p>Disconnected. Click 'Start Session' to reconnect.</p>
@@ -451,7 +451,7 @@ export default function Home() {
       </div>
 
       {/* Right Column - Conversation Transcript */}
-      <div className="flex w-96 flex-col rounded-lg border border-[#333333] bg-black p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+      <div className="flex w-96 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]" style={{ background: 'linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)' }}>
         <h2 className="mb-4 text-xl font-semibold">Conversation Transcript</h2>
         
         {transcript.length === 0 ? (
