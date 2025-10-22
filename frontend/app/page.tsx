@@ -31,7 +31,7 @@ interface RealtimeEvent {
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState("Click 'Start Conversation' to begin");
+  const [status, setStatus] = useState("Disconnected. Click 'Start' to reconnect.");
   const [transcript, setTranscript] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -74,25 +74,25 @@ export default function Home() {
 
       switch (realtimeEvent.type) {
         case "session.created":
-          setStatus("✅ Session created. Start speaking!");
+          setStatus("Session created. Start speaking!");
           break;
 
         case "session.updated":
-          setStatus("✅ Session configured. Ready!");
+          setStatus("Session configured. Ready!");
           break;
 
         case "input_audio_buffer.speech_started":
-          setStatus("🎤 Listening...");
+          setStatus("Listening...");
           break;
 
         case "input_audio_buffer.speech_stopped":
-          setStatus("💭 Processing...");
+          setStatus("Processing...");
           break;
 
         case "conversation.item.input_audio_transcription.completed":
           if (realtimeEvent.transcript) {
             setTranscript((prev) => [...prev, `You: ${realtimeEvent.transcript}`]);
-            setStatus("🤖 AI is responding...");
+            setStatus("AI is responding...");
           }
           break;
 
@@ -112,11 +112,11 @@ export default function Home() {
           break;
 
         case "response.audio_transcript.done":
-          setStatus("✅ Ready to listen...");
+          setStatus("Ready to listen");
           break;
 
         case "response.done":
-          setStatus("✅ Ready to listen...");
+          setStatus("Ready to listen");
           break;
 
         case "error":
@@ -296,92 +296,125 @@ export default function Home() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="max-w-4xl w-full space-y-6">
+    <main className="min-h-screen bg-black text-white">
+      <div className="max-w-[1400px] mx-auto p-6 space-y-4">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-            Azure OpenAI Voice Assistant
-          </h1>
-          <p className="text-gray-400 text-lg">
-            WebRTC Direct Connection • GPT-4o Realtime API
-          </p>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/50">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-blue-400">Live Activity Pulse</h1>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
+                  <span>Simulated</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-8 w-px bg-neutral-700"></div>
+
+            {/* Start/Stop Button */}
+            <button
+              onClick={isConnected ? stopConversation : startConversation}
+              disabled={isLoading}
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isConnected
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              }`}
+            >
+              {isLoading
+                ? "Connecting..."
+                : isConnected
+                ? "Stop Conversation"
+                : "Start Conversation"}
+            </button>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+              <span className="text-gray-400">{status}</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              1m
+            </button>
+            <button className="px-5 py-2 bg-neutral-800 text-gray-400 rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors">
+              3m
+            </button>
+            <button className="px-5 py-2 bg-neutral-800 text-gray-400 rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors">
+              5m
+            </button>
+          </div>
         </div>
 
         {/* Hidden audio element */}
         <audio ref={audioElementRef} autoPlay />
 
-        {/* Status Card */}
-        <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
-                }`}
-              />
-              <span className="font-semibold">
-                {isConnected ? "Connected" : "Disconnected"}
-              </span>
+        {/* Visualization Box - Compact */}
+        <div className="bg-neutral-900 rounded-2xl border border-neutral-800 p-6 h-[380px] flex flex-col">
+          <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">
+            {/* Placeholder for waveform visualization */}
+            <div className="text-center space-y-2">
+              <div className="text-xs opacity-50">Audio Visualization Area</div>
             </div>
           </div>
-
-          <p className="text-gray-300 text-center py-2">{status}</p>
-
-          {/* Control Button */}
-          <button
-            onClick={isConnected ? stopConversation : startConversation}
-            disabled={isLoading}
-            className={`w-full mt-4 px-8 py-4 rounded-xl text-xl font-semibold transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
-              isConnected
-                ? "bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/50"
-                : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/50"
-            }`}
-          >
-            {isLoading
-              ? "Connecting..."
-              : isConnected
-              ? "🛑 Stop Conversation"
-              : "🎤 Start Conversation"}
-          </button>
+          
+          {/* Bottom info bar */}
+          <div className="flex items-center justify-between pt-4 border-t border-neutral-800 text-xs text-gray-500">
+            <div>0:00 / 0:00</div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                <span>You</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                <span>AI</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                <span>Tool Call</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Transcript Card */}
         {transcript.length > 0 && (
-          <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700 max-h-96 overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <span>💬</span>
-              Conversation Transcript
-            </h2>
-            <div className="space-y-3">
+          <div className="bg-neutral-900 rounded-2xl border border-neutral-800 p-6 max-h-[400px] overflow-y-auto transcript-scroll">
+            <h2 className="text-base font-semibold mb-4 text-gray-300">Conversation Transcript</h2>
+            <div className="space-y-2.5">
               {transcript.map((message, index) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg ${
+                  className={`p-3 rounded-lg text-sm ${
                     message.startsWith("You:")
-                      ? "bg-blue-900/30 border-l-4 border-blue-500"
-                      : "bg-purple-900/30 border-l-4 border-purple-500"
+                      ? "bg-neutral-800/60 border-l-2 border-gray-600 text-gray-300"
+                      : "bg-emerald-950/30 border-l-2 border-emerald-600 text-emerald-100"
                   }`}
                 >
-                  <p className="text-sm font-mono whitespace-pre-wrap">
-                    {message}
-                  </p>
+                  <p className="whitespace-pre-wrap">{message}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="bg-gray-800/50 rounded-xl p-4 text-sm text-gray-400 border border-gray-700">
-          <h3 className="font-semibold text-white mb-2">📋 Setup Instructions:</h3>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Ensure your Azure OpenAI resource is in East US 2 or Sweden Central</li>
-            <li>Set AZURE_OPENAI_REGION environment variable to match your region</li>
-            <li>Backend will use the correct regional WebRTC endpoint automatically</li>
-            <li>Click "Start Conversation" and allow microphone access</li>
-            <li>Voice Activity Detection (VAD) handles turn-taking automatically</li>
-          </ul>
+        {/* Info footer */}
+        <div className="text-center text-xs text-gray-600 pt-2">
+          <p>Start your Python backend with WebSocket server on ws://localhost:8765</p>
+          <p className="mt-1">
+            <span className="text-emerald-500">Green waveform</span> = AI speaking • 
+            <span className="text-gray-400"> Gray waveform</span> = You speaking • 
+            <span className="text-amber-500"> Amber icons</span> = Tool calls
+          </p>
         </div>
       </div>
     </main>

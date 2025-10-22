@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-neutral-800;
+  }
+  
+  body {
+    @apply bg-black text-white;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar for transcript */
+  .transcript-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .transcript-scroll::-webkit-scrollbar-track {
+    @apply bg-neutral-800 rounded-lg;
+  }
+  
+  .transcript-scroll::-webkit-scrollbar-thumb {
+    @apply bg-neutral-600 rounded-lg;
+  }
+  
+  .transcript-scroll::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-500;
+  }
+}
