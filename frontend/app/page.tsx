@@ -10,7 +10,7 @@ interface SessionResponse {
     value: string;
     expires_at: number;
   };
-  webrtc_url: string;  // Added by our backend
+  webrtc_url: string; // Added by our backend
   turn_detection: any;
   voice: string;
   instructions: string;
@@ -29,10 +29,17 @@ interface RealtimeEvent {
   [key: string]: any;
 }
 
+type TranscriptRole = "user" | "ai";
+
+interface TranscriptMessage {
+  role: TranscriptRole;
+  content: string;
+}
+
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState("Click 'Start Conversation' to begin");
-  const [transcript, setTranscript] = useState<string[]>([]);
+  const [status, setStatus] = useState("Click 'Start Session' to begin");
+  const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -91,7 +98,10 @@ export default function Home() {
 
         case "conversation.item.input_audio_transcription.completed":
           if (realtimeEvent.transcript) {
-            setTranscript((prev) => [...prev, `You: ${realtimeEvent.transcript}`]);
+            setTranscript((prev) => [
+              ...prev,
+              { role: "user", content: realtimeEvent.transcript ?? "" },
+            ]);
             setStatus("🤖 AI is responding...");
           }
           break;
@@ -100,13 +110,18 @@ export default function Home() {
           if (realtimeEvent.delta) {
             setTranscript((prev) => {
               const lastIndex = prev.length - 1;
-              if (lastIndex >= 0 && prev[lastIndex].startsWith("AI: ")) {
+              if (lastIndex >= 0 && prev[lastIndex].role === "ai") {
                 const updated = [...prev];
-                updated[lastIndex] += realtimeEvent.delta;
+                updated[lastIndex] = {
+                  ...updated[lastIndex],
+                  content: `${updated[lastIndex].content}${realtimeEvent.delta}`,
+                };
                 return updated;
-              } else {
-                return [...prev, `AI: ${realtimeEvent.delta}`];
               }
+              return [
+                ...prev,
+                { role: "ai", content: realtimeEvent.delta ?? "" },
+              ];
             });
           }
           break;
@@ -292,7 +307,7 @@ export default function Home() {
     setStatus("Disconnecting...");
     cleanup();
     setIsConnected(false);
-    setStatus("Disconnected. Click 'Start' to reconnect.");
+    setStatus("Disconnected. Click 'Start Session' to reconnect.");
   };
 
   return (
@@ -300,8 +315,8 @@ export default function Home() {
       <div className="max-w-4xl w-full space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-            Azure OpenAI Voice Assistant
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-fuchsia-500 text-transparent bg-clip-text">
+            Agent Command Center
           </h1>
           <p className="text-gray-400 text-lg">
             WebRTC Direct Connection • GPT-4o Realtime API
@@ -317,7 +332,9 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+                  isConnected
+                    ? "bg-purple-400 animate-pulse"
+                    : "bg-slate-500"
                 }`}
               />
               <span className="font-semibold">
@@ -334,15 +351,15 @@ export default function Home() {
             disabled={isLoading}
             className={`w-full mt-4 px-8 py-4 rounded-xl text-xl font-semibold transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
               isConnected
-                ? "bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/50"
-                : "bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/50"
+                ? "bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 shadow-lg shadow-purple-500/50"
+                : "bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-blue-500/40"
             }`}
           >
             {isLoading
               ? "Connecting..."
               : isConnected
-              ? "🛑 Stop Conversation"
-              : "🎤 Start Conversation"}
+              ? "⏹ End Session"
+              : "🚀 Start Session"}
           </button>
         </div>
 
@@ -353,36 +370,45 @@ export default function Home() {
               <span>💬</span>
               Conversation Transcript
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {transcript.map((message, index) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-lg ${
-                    message.startsWith("You:")
-                      ? "bg-blue-900/30 border-l-4 border-blue-500"
-                      : "bg-purple-900/30 border-l-4 border-purple-500"
+                  className={`flex ${
+                    message.role === "ai" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  <p className="text-sm font-mono whitespace-pre-wrap">
-                    {message}
-                  </p>
+                  <div
+                    className={`flex max-w-xl items-start gap-3 ${
+                      message.role === "ai" ? "flex-row-reverse text-right" : ""
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border ${
+                        message.role === "ai"
+                          ? "border-purple-400/60 bg-purple-500/20 text-purple-200"
+                          : "border-blue-400/60 bg-blue-500/20 text-blue-200"
+                      }`}
+                    >
+                      {message.role === "ai" ? "🤖" : "🧑"}
+                    </div>
+                    <div
+                      className={`rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm ${
+                        message.role === "ai"
+                          ? "bg-gradient-to-l from-purple-500/20 to-indigo-500/10 border border-purple-400/40"
+                          : "bg-gradient-to-r from-blue-500/20 to-cyan-500/10 border border-blue-400/40"
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed text-gray-100 whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
-
-        {/* Instructions */}
-        <div className="bg-gray-800/50 rounded-xl p-4 text-sm text-gray-400 border border-gray-700">
-          <h3 className="font-semibold text-white mb-2">📋 Setup Instructions:</h3>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Ensure your Azure OpenAI resource is in East US 2 or Sweden Central</li>
-            <li>Set AZURE_OPENAI_REGION environment variable to match your region</li>
-            <li>Backend will use the correct regional WebRTC endpoint automatically</li>
-            <li>Click "Start Conversation" and allow microphone access</li>
-            <li>Voice Activity Detection (VAD) handles turn-taking automatically</li>
-          </ul>
-        </div>
       </div>
     </main>
   );
