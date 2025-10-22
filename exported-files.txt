@@ -1,3 +1,108 @@
+
+================================================================================
+FILE: WaveformVisualizer.tsx
+PATH: frontend/app/components/WaveformVisualizer.tsx
+================================================================================
+
+"use client";
+
+import { useEffect, useRef, MutableRefObject } from 'react';
+
+interface WaveformVisualizerProps {
+  isUserSpeakingRef: MutableRefObject<boolean>;
+  isAiSpeakingRef: MutableRefObject<boolean>;
+  timeWindow?: number;
+}
+
+export default function WaveformVisualizer({ 
+  isUserSpeakingRef, 
+  isAiSpeakingRef,
+  timeWindow = 60 
+}: WaveformVisualizerProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Static render - just draws the canvas with axis and labels
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const render = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      const axisY = rect.height - 18;
+
+      // Draw X-axis
+      ctx.strokeStyle = '#6b7280';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, axisY);
+      ctx.lineTo(rect.width, axisY);
+      ctx.stroke();
+
+      // Draw time labels
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      
+      const labels = ['60s', '45s', '30s', '15s', 'now'];
+      const positions = [0.08, 0.29, 0.5, 0.71, 0.97];
+      
+      labels.forEach((label, i) => {
+        const x = rect.width * positions[i];
+        
+        ctx.strokeStyle = '#6b7280';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, axisY - 6);
+        ctx.lineTo(x, axisY + 6);
+        ctx.stroke();
+        
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText(label, x, axisY + 7);
+      });
+    };
+
+    render();
+
+    // Re-render on window resize
+    const handleResize = () => render();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [timeWindow]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="h-full w-full"
+      style={{ display: 'block' }}
+    />
+  );
+}
+
+================================================================================
+END OF FILE: WaveformVisualizer.tsx
+================================================================================
+
+
+================================================================================
+FILE: page.tsx
+PATH: frontend/app/page.tsx
+================================================================================
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -44,8 +149,7 @@ export default function Home() {
   const [status, setStatus] = useState("Click 'Start Session' to begin");
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTimeRange, setSelectedTimeRange] =
-    useState<"1m" | "3m" | "5m">("1m");
+  const [selectedTimeRange, setSelectedTimeRange] = useState<'1m' | '3m' | '5m'>('1m');
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
 
@@ -54,28 +158,16 @@ export default function Home() {
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const isAiRespondingRef = useRef(false);
-
-  // Instant flags for the visualizer
+  
+  // Refs for INSTANT updates without waiting for React re-render
   const isUserSpeakingRef = useRef(false);
   const isAiSpeakingRef = useRef(false);
-
-  // WebAudio bits for visualization (cheap, optional)
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const userAnalyserRef = useRef<AnalyserNode | null>(null);
-  const aiAnalyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
     return () => {
       cleanup();
     };
   }, []);
-
-  const makeAnalyser = (ctx: AudioContext) => {
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0.8;
-    return analyser;
-  };
 
   const cleanup = () => {
     if (mediaStreamRef.current) {
@@ -84,40 +176,27 @@ export default function Home() {
     }
 
     if (dataChannelRef.current) {
-      try {
-        dataChannelRef.current.close();
-      } catch {}
+      dataChannelRef.current.close();
       dataChannelRef.current = null;
     }
 
     if (peerConnectionRef.current) {
-      try {
-        peerConnectionRef.current.close();
-      } catch {}
+      peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
 
     if (audioElementRef.current) {
       audioElementRef.current.srcObject = null;
     }
-
-    if (audioCtxRef.current) {
-      try {
-        audioCtxRef.current.close();
-      } catch {}
-      audioCtxRef.current = null;
-    }
-    userAnalyserRef.current = null;
-    aiAnalyserRef.current = null;
   };
 
   const getTimestamp = () => {
     const now = new Date();
-    return now.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
+    return now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true 
     });
   };
 
@@ -137,46 +216,45 @@ export default function Home() {
 
         case "input_audio_buffer.speech_started":
           setStatus("🎤 Listening...");
-          isUserSpeakingRef.current = true;
-          setIsUserSpeaking(true);
+          isUserSpeakingRef.current = true; // Update ref INSTANTLY
+          setIsUserSpeaking(true); // Update state for UI
           break;
 
         case "input_audio_buffer.speech_stopped":
           setStatus("💭 Processing...");
-          isUserSpeakingRef.current = false;
-          setIsUserSpeaking(false);
+          isUserSpeakingRef.current = false; // Update ref INSTANTLY
+          setIsUserSpeaking(false); // Update state for UI
           break;
 
         case "conversation.item.input_audio_transcription.completed":
           if (realtimeEvent.transcript) {
             setTranscript((prev) => [
               ...prev,
-              {
-                role: "user",
+              { 
+                role: "user", 
                 content: realtimeEvent.transcript ?? "",
-                timestamp: getTimestamp(),
+                timestamp: getTimestamp()
               },
             ]);
             setStatus("🤖 AI is responding...");
+            // Don't set isAiSpeaking here - wait for actual audio
             isAiRespondingRef.current = true;
           }
           break;
 
         case "response.audio.delta":
         case "response.audio_transcript.delta":
+          // Set AI speaking on first audio/transcript delta
           if (isAiRespondingRef.current && !isAiSpeakingRef.current) {
-            isAiSpeakingRef.current = true;
-            setIsAiSpeaking(true);
+            isAiSpeakingRef.current = true; // Update ref INSTANTLY
+            setIsAiSpeaking(true); // Update state for UI
           }
-
+          
           if (realtimeEvent.delta) {
             setTranscript((prev) => {
               const lastIndex = prev.length - 1;
-              if (
-                lastIndex >= 0 &&
-                prev[lastIndex].role === "ai" &&
-                isAiRespondingRef.current
-              ) {
+              // Only append to last message if it's AI AND we're currently in an AI response
+              if (lastIndex >= 0 && prev[lastIndex].role === "ai" && isAiRespondingRef.current) {
                 const updated = [...prev];
                 updated[lastIndex] = {
                   ...updated[lastIndex],
@@ -184,13 +262,14 @@ export default function Home() {
                 };
                 return updated;
               }
+              // Create new AI message only if we're in AI responding mode
               if (isAiRespondingRef.current) {
                 return [
                   ...prev,
-                  {
-                    role: "ai",
+                  { 
+                    role: "ai", 
                     content: realtimeEvent.delta ?? "",
-                    timestamp: getTimestamp(),
+                    timestamp: getTimestamp()
                   },
                 ];
               }
@@ -200,19 +279,22 @@ export default function Home() {
           break;
 
         case "response.audio_transcript.done":
-          // Transcript finished; audio may still be playing
+          // Transcript is done but audio might still be playing
+          // Don't change status here
           break;
 
         case "response.content_part.done":
         case "response.output_item.done":
         case "response.done":
-          // Content generated; wait for output_audio_buffer.stopped
+          // These events fire when content is generated, but audio might still be playing
+          // Don't change status here
           break;
 
         case "output_audio_buffer.stopped":
+          // Audio playback is actually complete
           setStatus("✅ Ready to listen...");
-          isAiSpeakingRef.current = false;
-          setIsAiSpeaking(false);
+          isAiSpeakingRef.current = false; // Update ref INSTANTLY
+          setIsAiSpeaking(false); // Update state for UI
           isAiRespondingRef.current = false;
           break;
 
@@ -247,6 +329,10 @@ export default function Home() {
       }
 
       const sessionData: SessionResponse = await tokenResponse.json();
+      
+      console.log("✅ Session received");
+      console.log("WebRTC URL:", sessionData.webrtc_url);
+      console.log("Model:", sessionData.model);
 
       if (!sessionData.webrtc_url) {
         throw new Error("Backend did not return webrtc_url");
@@ -269,16 +355,6 @@ export default function Home() {
         },
       });
       mediaStreamRef.current = stream;
-
-      // WebAudio analyzers (for visualization only)
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      userAnalyserRef.current = makeAnalyser(ctx);
-      const userSrc = ctx.createMediaStreamSource(stream);
-      userSrc.connect(userAnalyserRef.current);
 
       setStatus("Creating WebRTC connection...");
 
@@ -316,20 +392,11 @@ export default function Home() {
       // ========================================
       pc.ontrack = (event) => {
         console.log("🔊 Received audio track");
-
-        // Visual analyser for AI audio (observation only)
-        if (audioCtxRef.current && event.streams[0]) {
-          const ctx = audioCtxRef.current;
-          aiAnalyserRef.current = makeAnalyser(ctx);
-          const aiSrc = ctx.createMediaStreamSource(event.streams[0]);
-          aiSrc.connect(aiAnalyserRef.current);
-        }
-
         if (audioElementRef.current && event.streams[0]) {
           audioElementRef.current.srcObject = event.streams[0];
-          audioElementRef.current
-            .play()
-            .catch((e) => console.error("Error playing audio:", e));
+          audioElementRef.current.play().catch((e) => {
+            console.error("Error playing audio:", e);
+          });
         }
       };
 
@@ -338,7 +405,7 @@ export default function Home() {
       // ========================================
       pc.onconnectionstatechange = () => {
         console.log("Connection state:", pc.connectionState);
-
+        
         if (pc.connectionState === "connected") {
           setStatus("✅ Connected! Start speaking...");
           setIsConnected(true);
@@ -359,12 +426,14 @@ export default function Home() {
       // STEP 9: Exchange SDP with Azure
       // ========================================
       setStatus("Connecting to Azure...");
-
+      
       const webrtcUrl = `${sessionData.webrtc_url}?model=${sessionData.model}`;
+      console.log("Connecting to:", webrtcUrl);
+      
       const sdpResponse = await fetch(webrtcUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${ephemeralToken}`,
+          "Authorization": `Bearer ${ephemeralToken}`,
           "Content-Type": "application/sdp",
         },
         body: offer.sdp,
@@ -377,6 +446,7 @@ export default function Home() {
       }
 
       const answerSdp = await sdpResponse.text();
+      console.log("✅ Got SDP answer from Azure");
 
       // ========================================
       // STEP 10: Set remote description
@@ -387,6 +457,7 @@ export default function Home() {
       });
 
       console.log("✅ WebRTC connected!");
+
     } catch (error) {
       console.error("Connection error:", error);
       setStatus(`Error: ${error instanceof Error ? error.message : "Unknown"}`);
@@ -414,14 +485,11 @@ export default function Home() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-2">
-            <h1
-              className="text-3xl font-bold tracking-tight"
-              style={{ color: "#7B9DD3" }}
-            >
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#7B9DD3' }}>
               Agent Command Center
             </h1>
             <div className="flex items-center gap-2 text-sm">
-              <Sparkles className="h-4 w-4" style={{ color: "#10b981" }} />
+              <Sparkles className="h-4 w-4" style={{ color: '#10b981' }} />
               <p className="text-slate-400">{status}</p>
             </div>
           </div>
@@ -430,8 +498,8 @@ export default function Home() {
               onClick={isConnected ? stopConversation : startConversation}
               disabled={isLoading}
               className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                backgroundColor: isConnected ? "#ef4444" : "#7B9DD3",
+              style={{ 
+                backgroundColor: isConnected ? '#ef4444' : '#7B9DD3'
               }}
             >
               {isConnected ? (
@@ -447,34 +515,31 @@ export default function Home() {
               )}
             </button>
             <button
-              onClick={() => setSelectedTimeRange("1m")}
+              onClick={() => setSelectedTimeRange('1m')}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{
-                backgroundColor:
-                  selectedTimeRange === "1m" ? "#7B9DD3" : "#374151",
-                opacity: selectedTimeRange === "1m" ? 1 : 0.6,
+              style={{ 
+                backgroundColor: selectedTimeRange === '1m' ? '#7B9DD3' : '#374151',
+                opacity: selectedTimeRange === '1m' ? 1 : 0.6
               }}
             >
               1m
             </button>
             <button
-              onClick={() => setSelectedTimeRange("3m")}
+              onClick={() => setSelectedTimeRange('3m')}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{
-                backgroundColor:
-                  selectedTimeRange === "3m" ? "#7B9DD3" : "#374151",
-                opacity: selectedTimeRange === "3m" ? 1 : 0.6,
+              style={{ 
+                backgroundColor: selectedTimeRange === '3m' ? '#7B9DD3' : '#374151',
+                opacity: selectedTimeRange === '3m' ? 1 : 0.6
               }}
             >
               3m
             </button>
             <button
-              onClick={() => setSelectedTimeRange("5m")}
+              onClick={() => setSelectedTimeRange('5m')}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{
-                backgroundColor:
-                  selectedTimeRange === "5m" ? "#7B9DD3" : "#374151",
-                opacity: selectedTimeRange === "5m" ? 1 : 0.6,
+              style={{ 
+                backgroundColor: selectedTimeRange === '5m' ? '#7B9DD3' : '#374151',
+                opacity: selectedTimeRange === '5m' ? 1 : 0.6
               }}
             >
               5m
@@ -483,30 +548,16 @@ export default function Home() {
         </div>
 
         {/* Visualization Panel */}
-        <div
-          className="flex h-64 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
-          style={{
-            background: "linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)",
-          }}
-        >
+        <div className="flex h-64 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]" style={{ background: 'linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)' }}>
           <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider text-gray-500">
             <span>Audio Visualization</span>
             <span>Waveform</span>
           </div>
-          <div className="relative flex-1" style={{ minHeight: "130px" }}>
-            <WaveformVisualizer
+          <div className="flex-1 relative" style={{ minHeight: '130px' }}>
+            <WaveformVisualizer 
               isUserSpeakingRef={isUserSpeakingRef}
               isAiSpeakingRef={isAiSpeakingRef}
-              timeWindow={
-                selectedTimeRange === "1m"
-                  ? 60
-                  : selectedTimeRange === "3m"
-                  ? 180
-                  : 300
-              }
-              userAnalyser={userAnalyserRef.current ?? undefined}
-              aiAnalyser={aiAnalyserRef.current ?? undefined}
-              isActive={isConnected}
+              timeWindow={selectedTimeRange === '1m' ? 60 : selectedTimeRange === '3m' ? 180 : 300}
             />
           </div>
           <div className="mt-3 flex items-center justify-end text-sm">
@@ -528,32 +579,18 @@ export default function Home() {
         </div>
 
         {/* Agent Telemetry Panel */}
-        <div
-          className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
-          style={{
-            background: "linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)",
-          }}
-        >
+        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]" style={{ background: 'linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)' }}>
           <h2 className="mb-4 text-xl font-semibold">Agent Telemetry</h2>
           <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
-            <p>
-              {isConnected
-                ? "Streaming…"
-                : "Disconnected. Click 'Start Session' to reconnect."}
-            </p>
+            <p>Disconnected. Click 'Start Session' to reconnect.</p>
           </div>
         </div>
       </div>
 
       {/* Right Column - Conversation Transcript */}
-      <div
-        className="flex w-96 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
-        style={{
-          background: "linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)",
-        }}
-      >
+      <div className="flex w-96 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]" style={{ background: 'linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)' }}>
         <h2 className="mb-4 text-xl font-semibold">Conversation Transcript</h2>
-
+        
         {transcript.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
             Start the conversation to see transcripts here
@@ -574,13 +611,8 @@ export default function Home() {
                         : "border-[#333333] bg-[#374151]"
                     }`}
                   >
-                    <div
-                      className="mb-1 flex items-center gap-1 font-mono text-xs opacity-70"
-                      style={{ color: "#9ca3af" }}
-                    >
-                      {isAi && (
-                        <Sparkles className="h-5 w-5" style={{ color: "#10b981" }} />
-                      )}
+                    <div className="mb-1 flex items-center gap-1 font-mono text-xs opacity-70" style={{ color: '#9ca3af' }}>
+                      {isAi && <Sparkles className="h-5 w-5" style={{ color: '#10b981' }} />}
                       <span>{message.timestamp}</span>
                     </div>
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">
@@ -596,3 +628,9 @@ export default function Home() {
     </main>
   );
 }
+
+
+================================================================================
+END OF FILE: page.tsx
+================================================================================
+
