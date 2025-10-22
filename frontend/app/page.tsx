@@ -296,11 +296,11 @@ export default function Home() {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+    <main className="flex flex-col items-center justify-center min-h-screen p-8 bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
       <div className="max-w-4xl w-full space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+        <div className="text-center space-y-2 mb-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 text-transparent bg-clip-text tracking-tight">
             Agent Command Center
           </h1>
         </div>
@@ -309,30 +309,53 @@ export default function Home() {
         <audio ref={audioElementRef} autoPlay />
 
         {/* Status Card */}
-        <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"
+                  isConnected ? "bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" : "bg-gray-500"
                 }`}
               />
-              <span className="font-semibold">
+              <span className="font-semibold text-gray-200">
                 {isConnected ? "Connected" : "Disconnected"}
               </span>
             </div>
           </div>
 
-          <p className="text-gray-300 text-center py-2">{status}</p>
+          {/* Audio Visualization Area */}
+          <div className="bg-gray-900/60 rounded-xl p-8 mb-4 border border-gray-700/30">
+            <div className="flex items-center justify-center h-32">
+              {isConnected ? (
+                <div className="flex items-center gap-2">
+                  {[...Array(20)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 bg-gradient-to-t from-blue-500 to-purple-500 rounded-full animate-pulse"
+                      style={{
+                        height: `${Math.random() * 80 + 20}%`,
+                        animationDelay: `${i * 0.05}s`,
+                        animationDuration: '0.8s'
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">Audio Visualization area</p>
+              )}
+            </div>
+          </div>
+
+          <p className="text-gray-400 text-center py-2 text-sm">{status}</p>
 
           {/* Control Button */}
           <button
             onClick={isConnected ? stopConversation : startConversation}
             disabled={isLoading}
-            className={`w-full mt-4 px-8 py-4 rounded-xl text-xl font-semibold transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`w-full mt-4 px-8 py-4 rounded-xl font-medium transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
               isConnected
-                ? "bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-500/50"
-                : "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/50"
+                ? "bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600"
+                : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30"
             }`}
           >
             {isLoading
@@ -345,40 +368,40 @@ export default function Home() {
 
         {/* Transcript Card */}
         {transcript.length > 0 && (
-          <div className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700 max-h-96 overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <span>💬</span>
-              Conversation Transcript
+          <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-gray-700/50 max-h-[500px] overflow-y-auto">
+            <h2 className="text-lg font-medium mb-6 text-gray-300">
+              Conversation
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-6">
               {transcript.map((message, index) => {
                 const isUser = message.startsWith("You:");
+                const content = message.replace(/^(You:|AI:)\s*/, '');
                 return (
                   <div
                     key={index}
-                    className={`flex items-start gap-3 ${
-                      isUser ? "justify-start" : "justify-end"
+                    className={`flex items-start gap-4 ${
+                      isUser ? "justify-end" : "justify-start"
                     }`}
                   >
-                    {isUser && (
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                        <span className="text-lg">👤</span>
+                    {!isUser && (
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                        <span className="text-xl">✨</span>
                       </div>
                     )}
                     <div
-                      className={`p-3 rounded-lg max-w-[80%] ${
+                      className={`px-4 py-3 rounded-2xl max-w-[75%] ${
                         isUser
-                          ? "bg-blue-900/30 border-l-4 border-blue-500"
-                          : "bg-purple-900/30 border-r-4 border-purple-500"
+                          ? "bg-blue-600/90 text-white"
+                          : "bg-gray-700/60 text-gray-100 border border-gray-600/30"
                       }`}
                     >
-                      <p className="text-sm font-mono whitespace-pre-wrap">
-                        {message}
+                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap">
+                        {content}
                       </p>
                     </div>
-                    {!isUser && (
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
-                        <span className="text-lg">🤖</span>
+                    {isUser && (
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center border border-gray-500">
+                        <span className="text-xl">👤</span>
                       </div>
                     )}
                   </div>
