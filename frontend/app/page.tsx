@@ -38,8 +38,8 @@ interface TranscriptMessage {
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState("Click 'Start Session' to begin");
-  const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
+  const [status, setStatus] = useState("Disconnected. Click 'Start' to reconnect.");
+  const [transcript, setTranscript] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -81,28 +81,25 @@ export default function Home() {
 
       switch (realtimeEvent.type) {
         case "session.created":
-          setStatus("✅ Session created. Start speaking!");
+          setStatus("Session created. Start speaking!");
           break;
 
         case "session.updated":
-          setStatus("✅ Session configured. Ready!");
+          setStatus("Session configured. Ready!");
           break;
 
         case "input_audio_buffer.speech_started":
-          setStatus("🎤 Listening...");
+          setStatus("Listening...");
           break;
 
         case "input_audio_buffer.speech_stopped":
-          setStatus("💭 Processing...");
+          setStatus("Processing...");
           break;
 
         case "conversation.item.input_audio_transcription.completed":
           if (realtimeEvent.transcript) {
-            setTranscript((prev) => [
-              ...prev,
-              { role: "user", content: realtimeEvent.transcript ?? "" },
-            ]);
-            setStatus("🤖 AI is responding...");
+            setTranscript((prev) => [...prev, `You: ${realtimeEvent.transcript}`]);
+            setStatus("AI is responding...");
           }
           break;
 
@@ -127,11 +124,11 @@ export default function Home() {
           break;
 
         case "response.audio_transcript.done":
-          setStatus("✅ Ready to listen...");
+          setStatus("Ready to listen");
           break;
 
         case "response.done":
-          setStatus("✅ Ready to listen...");
+          setStatus("Ready to listen");
           break;
 
         case "error":
@@ -311,43 +308,92 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#050b18] via-[#040615] to-[#010109] px-6 py-10 text-white">
-      <div className="w-full max-w-5xl space-y-8">
+    <main className="min-h-screen bg-black text-white">
+      <div className="max-w-[1400px] mx-auto p-6 space-y-4">
         {/* Header */}
-        <div className="space-y-3 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs uppercase tracking-[0.35em] text-slate-300/80">
-            Realtime Control
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/50">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-blue-400">Live Activity Pulse</h1>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
+                  <span>Simulated</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-8 w-px bg-neutral-700"></div>
+
+            {/* Start/Stop Button */}
+            <button
+              onClick={isConnected ? stopConversation : startConversation}
+              disabled={isLoading}
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isConnected
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              }`}
+            >
+              {isLoading
+                ? "Connecting..."
+                : isConnected
+                ? "Stop Conversation"
+                : "Start Conversation"}
+            </button>
+
+            <div className="flex items-center gap-3 text-sm">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+              <span className="text-gray-400">{status}</span>
+            </div>
           </div>
-          <h1 className="text-4xl font-semibold text-white md:text-5xl">
-            <span className="bg-gradient-to-r from-sky-300 via-indigo-400 to-fuchsia-500 bg-clip-text text-transparent">
-              Agent Command Center
-            </span>
-          </h1>
-          <p className="text-sm text-slate-400 md:text-base">
-            WebRTC Direct Connection • GPT-4o Realtime API
-          </p>
+          
+          <div className="flex items-center gap-2">
+            <button className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              1m
+            </button>
+            <button className="px-5 py-2 bg-neutral-800 text-gray-400 rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors">
+              3m
+            </button>
+            <button className="px-5 py-2 bg-neutral-800 text-gray-400 rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors">
+              5m
+            </button>
+          </div>
         </div>
 
         {/* Hidden audio element */}
         <audio ref={audioElementRef} autoPlay />
 
-        {/* Status Card */}
-        <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-[1.1fr_1fr]">
-          <div className="rounded-3xl border border-white/10 bg-[#0b1020]/80 p-6 shadow-[0_35px_120px_-60px_rgba(59,130,246,0.5)] backdrop-blur">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    isConnected ? "bg-sky-400 animate-pulse" : "bg-slate-600"
-                  }`}
-                />
-                <span className="text-sm font-medium tracking-wide text-slate-200">
-                  {isConnected ? "Live" : "Standby"}
-                </span>
+        {/* Visualization Box - Compact */}
+        <div className="bg-neutral-900 rounded-2xl border border-neutral-800 p-6 h-[380px] flex flex-col">
+          <div className="flex-1 flex items-center justify-center text-gray-600 text-sm">
+            {/* Placeholder for waveform visualization */}
+            <div className="text-center space-y-2">
+              <div className="text-xs opacity-50">Audio Visualization Area</div>
+            </div>
+          </div>
+          
+          {/* Bottom info bar */}
+          <div className="flex items-center justify-between pt-4 border-t border-neutral-800 text-xs text-gray-500">
+            <div>0:00 / 0:00</div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                <span>You</span>
               </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.65rem] uppercase tracking-[0.3em] text-slate-400">
-                {isConnected ? "Session Active" : "Awaiting Start"}
-              </span>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                <span>AI</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                <span>Tool Call</span>
+              </div>
             </div>
 
             <p className="text-center text-sm text-slate-300 md:text-base">{status}</p>
@@ -369,66 +415,38 @@ export default function Home() {
                 : "🚀 Start Session"}
             </button>
           </div>
-
-          {/* Visualization */}
-          <div className="rounded-3xl border border-white/10 bg-[#0a0f1c]/80 p-6 shadow-[0_45px_140px_-80px_rgba(14,116,144,0.8)] backdrop-blur">
-            <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
-              <span>Audio Visualization</span>
-              <span>Waveform</span>
-            </div>
-            <div className="flex h-48 items-center justify-center rounded-2xl border border-white/5 bg-gradient-to-br from-[#0b1224] via-[#050912] to-[#02040b] text-[0.7rem] uppercase tracking-[0.4em] text-slate-600">
-              awaiting signal
-            </div>
-          </div>
-        </section>
+        </div>
 
         {/* Transcript Card */}
         {transcript.length > 0 && (
-          <div className="rounded-3xl border border-white/10 bg-[#090f1d]/80 p-6 shadow-[0_45px_160px_-90px_rgba(79,70,229,0.8)] backdrop-blur">
-            <h2 className="mb-6 flex items-center gap-3 text-lg font-semibold text-slate-200">
-              <span className="text-xl">💬</span>
-              Conversation Transcript
-            </h2>
-            <div className="space-y-5 overflow-y-auto pr-1 max-h-[28rem]">
-              {transcript.map((message, index) => {
-                const isAi = message.role === "ai";
-                return (
-                  <div
-                    key={index}
-                    className={`flex ${isAi ? "justify-start" : "justify-end"}`}
-                  >
-                    <div
-                      className={`flex max-w-2xl items-end gap-3 ${
-                        isAi ? "flex-row" : "flex-row-reverse"
-                      }`}
-                    >
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border ${
-                          isAi
-                            ? "border-indigo-400/40 bg-indigo-500/10 text-indigo-200"
-                            : "border-sky-400/40 bg-sky-500/10 text-sky-200"
-                        }`}
-                      >
-                        {isAi ? "✨" : "🧑"}
-                      </div>
-                      <div
-                        className={`rounded-3xl px-5 py-3 text-sm leading-relaxed shadow-[0_18px_60px_-45px_rgba(99,102,241,0.7)] backdrop-blur ${
-                          isAi
-                            ? "bg-gradient-to-r from-[#0f172a]/90 via-[#111a2f]/70 to-[#0b1224]/60 text-slate-200"
-                            : "bg-gradient-to-l from-sky-500/20 via-sky-500/10 to-cyan-400/10 text-slate-100"
-                        } ${isAi ? "border border-indigo-400/20" : "border border-sky-400/20"}`}
-                      >
-                        <p className="whitespace-pre-wrap text-[0.95rem] text-slate-100">
-                          {message.content}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="bg-neutral-900 rounded-2xl border border-neutral-800 p-6 max-h-[400px] overflow-y-auto transcript-scroll">
+            <h2 className="text-base font-semibold mb-4 text-gray-300">Conversation Transcript</h2>
+            <div className="space-y-2.5">
+              {transcript.map((message, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg text-sm ${
+                    message.startsWith("You:")
+                      ? "bg-neutral-800/60 border-l-2 border-gray-600 text-gray-300"
+                      : "bg-emerald-950/30 border-l-2 border-emerald-600 text-emerald-100"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{message}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
+
+        {/* Info footer */}
+        <div className="text-center text-xs text-gray-600 pt-2">
+          <p>Start your Python backend with WebSocket server on ws://localhost:8765</p>
+          <p className="mt-1">
+            <span className="text-emerald-500">Green waveform</span> = AI speaking • 
+            <span className="text-gray-400"> Gray waveform</span> = You speaking • 
+            <span className="text-amber-500"> Amber icons</span> = Tool calls
+          </p>
+        </div>
       </div>
     </main>
   );
