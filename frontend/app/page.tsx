@@ -43,11 +43,13 @@ export default function Home() {
   const [status, setStatus] = useState("Click 'Start Session' to begin");
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<"1m" | "3m" | "5m">("1m");
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const shouldStartNewAiMessageRef = useRef(true);
 
   useEffect(() => {
     return () => {
@@ -74,6 +76,8 @@ export default function Home() {
     if (audioElementRef.current) {
       audioElementRef.current.srcObject = null;
     }
+
+    shouldStartNewAiMessageRef.current = true;
   };
 
   const getTimestamp = () => {
@@ -112,45 +116,60 @@ export default function Home() {
           if (realtimeEvent.transcript) {
             setTranscript((prev) => [
               ...prev,
-              { 
-                role: "user", 
+              {
+                role: "user",
                 content: realtimeEvent.transcript ?? "",
                 timestamp: getTimestamp()
               },
             ]);
             setStatus("🤖 AI is responding...");
+            shouldStartNewAiMessageRef.current = true;
           }
+          break;
+
+        case "response.created":
+          shouldStartNewAiMessageRef.current = true;
           break;
 
         case "response.audio_transcript.delta":
           if (realtimeEvent.delta) {
             setTranscript((prev) => {
               const lastIndex = prev.length - 1;
-              if (lastIndex >= 0 && prev[lastIndex].role === "ai") {
-                const updated = [...prev];
-                updated[lastIndex] = {
-                  ...updated[lastIndex],
-                  content: `${updated[lastIndex].content}${realtimeEvent.delta}`,
-                };
-                return updated;
+              const shouldStartNew =
+                shouldStartNewAiMessageRef.current ||
+                lastIndex < 0 ||
+                prev[lastIndex].role !== "ai";
+
+              if (shouldStartNew) {
+                shouldStartNewAiMessageRef.current = false;
+                return [
+                  ...prev,
+                  {
+                    role: "ai",
+                    content: realtimeEvent.delta ?? "",
+                    timestamp: getTimestamp()
+                  },
+                ];
               }
-              return [
-                ...prev,
-                { 
-                  role: "ai", 
-                  content: realtimeEvent.delta ?? "",
-                  timestamp: getTimestamp()
-                },
-              ];
+
+              const updated = [...prev];
+              updated[lastIndex] = {
+                ...updated[lastIndex],
+                content: `${updated[lastIndex].content}${realtimeEvent.delta}`,
+              };
+              shouldStartNewAiMessageRef.current = false;
+              return updated;
             });
           }
           break;
 
         case "response.audio_transcript.done":
+          shouldStartNewAiMessageRef.current = true;
           setStatus("✅ Ready to listen...");
           break;
 
         case "response.done":
+          shouldStartNewAiMessageRef.current = true;
           setStatus("✅ Ready to listen...");
           break;
 
@@ -328,26 +347,40 @@ export default function Home() {
     cleanup();
     setIsConnected(false);
     setStatus("Disconnected. Click 'Start Session' to reconnect.");
+    shouldStartNewAiMessageRef.current = true;
   };
 
   return (
-    <main className="flex h-screen gap-6 bg-gradient-to-b from-black to-[#1A1A1A] p-6 text-white">
+    <main className="flex h-screen gap-6 bg-black p-6 text-white">
       {/* Hidden audio element */}
       <audio ref={audioElementRef} autoPlay />
 
       {/* Left Column - Main Content */}
       <div className="flex flex-1 flex-col gap-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#7B9DD3' }}>
-            Agent Command Center
-          </h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#7B9DD3' }}>
+              Agent Command Center
+            </h1>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-lg border border-[#1f2937] bg-[#0f172a] px-4 py-3 shadow-[0_4px_8px_rgba(0,0,0,0.35)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(16,185,129,0.1)]">
+                  <Sparkles className="h-6 w-6" style={{ color: '#10b981' }} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs uppercase tracking-[0.2em] text-slate-400">Agent Status</span>
+                  <span className="text-sm font-medium text-slate-100">{status}</span>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={isConnected ? stopConversation : startConversation}
               disabled={isLoading}
               className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ 
+              style={{
                 backgroundColor: isConnected ? '#ef4444' : '#7B9DD3'
               }}
             >
@@ -363,33 +396,29 @@ export default function Home() {
                 </>
               )}
             </button>
-            <button
-              className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: '#7B9DD3' }}
-            >
-              1m
-            </button>
-            <button
-              className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: '#7B9DD3' }}
-            >
-              3m
-            </button>
-            <button
-              className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
-              style={{ backgroundColor: '#7B9DD3' }}
-            >
-              5m
-            </button>
+            {["1m", "3m", "5m"].map((duration) => {
+              const isSelected = selectedDuration === duration;
+              return (
+                <button
+                  key={duration}
+                  onClick={() => setSelectedDuration(duration as "1m" | "3m" | "5m")}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 hover:opacity-90 ${
+                    isSelected ? "text-black" : "text-white"
+                  }`}
+                  style={{
+                    backgroundColor: isSelected ? '#7B9DD3' : '#1f2937',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  {duration}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <p className="text-sm text-slate-400">
-          WebRTC Direct Connection • GPT-4o Realtime API
-        </p>
-
         {/* Visualization Panel */}
-        <div className="flex h-64 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-black to-[#1A1A1A] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+        <div className="flex h-64 flex-col rounded-lg border border-[#1f2937] bg-[#050505] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.6)]">
           <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider text-gray-500">
             <span>Audio Visualization</span>
             <span>Waveform</span>
@@ -417,7 +446,7 @@ export default function Home() {
         </div>
 
         {/* Agent Telemetry Panel */}
-        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-black to-[#1A1A1A] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+        <div className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#1f2937] bg-[#050505] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.6)]">
           <h2 className="mb-4 text-xl font-semibold">Agent Telemetry</h2>
           <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
             <p>{status}</p>
@@ -426,9 +455,9 @@ export default function Home() {
       </div>
 
       {/* Right Column - Conversation Transcript */}
-      <div className="flex w-96 flex-col rounded-lg border border-[#333333] bg-gradient-to-b from-black to-[#1A1A1A] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]">
+      <div className="flex w-96 flex-col rounded-lg border border-[#1f2937] bg-[#050505] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.6)]">
         <h2 className="mb-4 text-xl font-semibold">Conversation Transcript</h2>
-        
+
         {transcript.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
             Start the conversation to see transcripts here
@@ -450,7 +479,7 @@ export default function Home() {
                     }`}
                   >
                     <div className="mb-1 flex items-center gap-1 font-mono text-xs opacity-70" style={{ color: '#9ca3af' }}>
-                      {isAi && <Sparkles className="h-3 w-3" style={{ color: '#10b981' }} />}
+                      {isAi && <Sparkles className="h-4 w-4" style={{ color: '#10b981' }} />}
                       <span>{message.timestamp}</span>
                     </div>
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">
