@@ -175,21 +175,21 @@ export default function Home() {
 
       switch (realtimeEvent.type) {
         case "session.created":
-          setStatus("✅ Session created. Start speaking!");
+          setStatus("Session created. Start speaking!");
           break;
 
         case "session.updated":
-          setStatus("✅ Session configured. Ready!");
+          setStatus("Session configured. Ready!");
           break;
 
         case "input_audio_buffer.speech_started":
-          setStatus("🎤 Listening...");
+          setStatus("Listening...");
           isUserSpeakingRef.current = true;
           setIsUserSpeaking(true);
           break;
 
         case "input_audio_buffer.speech_stopped":
-          setStatus("💭 Processing...");
+          setStatus("Processing...");
           isUserSpeakingRef.current = false;
           setIsUserSpeaking(false);
           break;
@@ -204,7 +204,7 @@ export default function Home() {
                 timestamp: getTimestamp(),
               },
             ]);
-            setStatus("🤖 AI is responding...");
+            setStatus("AI is responding...");
             isAiRespondingRef.current = true;
           }
           break;
@@ -255,7 +255,7 @@ export default function Home() {
           break;
 
         case "output_audio_buffer.stopped":
-          setStatus("✅ Ready to listen...");
+          setStatus("Ready to listen...");
           isAiSpeakingRef.current = false;
           setIsAiSpeaking(false);
           isAiRespondingRef.current = false;
@@ -273,8 +273,8 @@ export default function Home() {
               isToolRunningRef.current = true;
               setStatus(
                 it.name
-                  ? `🛠️ Running tool: ${it.name}`
-                  : "🛠️ Running tool..."
+                  ? `Running tool: ${it.name}`
+                  : "Running tool..."
               );
             }
           }
@@ -339,14 +339,14 @@ export default function Home() {
               isToolRunningRef.current = false;
             }
 
-            setStatus("🤖 AI is responding...");
+            setStatus("AI is responding...");
           })();
 
           break;
         }
 
         case "error":
-          console.error("❌ Server error:", realtimeEvent.error);
+          console.error("Server error:", realtimeEvent.error);
           setStatus(`Error: ${realtimeEvent.error?.message || "Unknown error"}`);
           break;
       }
@@ -492,7 +492,7 @@ export default function Home() {
         console.log("Connection state:", pc.connectionState);
 
         if (pc.connectionState === "connected") {
-          setStatus("✅ Connected! Start speaking...");
+          setStatus("Connected! Start speaking...");
           setIsConnected(true);
         } else if (pc.connectionState === "failed") {
           setStatus("Connection failed");
@@ -568,7 +568,7 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <h1
               className="text-3xl font-bold tracking-tight"
-              style={{ color: "#10B981" }}
+              style={{ color: "#059669" }}
             >
               Agent Command Center
             </h1>
@@ -581,9 +581,11 @@ export default function Home() {
             <button
               onClick={isConnected ? stopConversation : startConversation}
               disabled={isLoading}
-              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               style={{
-                backgroundColor: isConnected ? "#ef4444" : "#10B981",
+                background: isConnected
+                  ? "#ef4444"
+                  : "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)",
               }}
             >
               {isConnected ? (
@@ -602,9 +604,11 @@ export default function Home() {
               onClick={() => setSelectedTimeRange("1m")}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
               style={{
-                backgroundColor:
-                  selectedTimeRange === "1m" ? "#7B9DD3" : "#374151",
-                opacity: selectedTimeRange === "1m" ? 1 : 0.6,
+                background:
+                  selectedTimeRange === "1m"
+                    ? "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)"
+                    : "#1B3A4B",
+                opacity: selectedTimeRange === "1m" ? 1 : 0.75,
               }}
             >
               1m
@@ -613,9 +617,11 @@ export default function Home() {
               onClick={() => setSelectedTimeRange("3m")}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
               style={{
-                backgroundColor:
-                  selectedTimeRange === "3m" ? "#7B9DD3" : "#374151",
-                opacity: selectedTimeRange === "3m" ? 1 : 0.6,
+                background:
+                  selectedTimeRange === "3m"
+                    ? "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)"
+                    : "#1B3A4B",
+                opacity: selectedTimeRange === "3m" ? 1 : 0.75,
               }}
             >
               3m
@@ -624,9 +630,11 @@ export default function Home() {
               onClick={() => setSelectedTimeRange("5m")}
               className="rounded-md px-3 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-90"
               style={{
-                backgroundColor:
-                  selectedTimeRange === "5m" ? "#7B9DD3" : "#374151",
-                opacity: selectedTimeRange === "5m" ? 1 : 0.6,
+                background:
+                  selectedTimeRange === "5m"
+                    ? "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)"
+                    : "#1B3A4B",
+                opacity: selectedTimeRange === "5m" ? 1 : 0.75,
               }}
             >
               5m
@@ -673,10 +681,7 @@ export default function Home() {
                 <span>AI</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 text-amber-400">
-                  <Wrench className="h-3 w-3" />
-                  <div className="h-3 w-px bg-amber-400" />
-                </div>
+                <Wrench className="h-3 w-3 text-amber-400" />
                 <span>Tool Call</span>
               </div>
             </div>

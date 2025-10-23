@@ -62,7 +62,6 @@ export default function WaveformVisualizer({
       // fixed ticks: 60s,45s,30s,15s,now
       const tickSeconds = [60, 45, 30, 15, 0];
       ctx.font = "11px monospace";
-      ctx.textAlign = "center";
       ctx.textBaseline = "top";
 
       tickSeconds.forEach((secsAgo) => {
@@ -78,10 +77,25 @@ export default function WaveformVisualizer({
         ctx.lineTo(x, axisY + 6);
         ctx.stroke();
 
-        // label
+        // label - adjust alignment for edge labels to prevent clipping
         const label = secsAgo === 0 ? "now" : `${secsAgo}s`;
         ctx.fillStyle = "#9ca3af";
-        ctx.fillText(label, x, axisY + 7);
+        
+        // Right edge (now): align right
+        if (secsAgo === 0) {
+          ctx.textAlign = "right";
+          ctx.fillText(label, x - 2, axisY + 7);
+        }
+        // Left edge (60s): align left
+        else if (secsAgo === timeWindow) {
+          ctx.textAlign = "left";
+          ctx.fillText(label, x + 2, axisY + 7);
+        }
+        // Middle labels: center
+        else {
+          ctx.textAlign = "center";
+          ctx.fillText(label, x, axisY + 7);
+        }
       });
     };
 
@@ -117,10 +131,11 @@ export default function WaveformVisualizer({
     };
 
     // Colors to match legend
-    const COLOR_USER = "#9CA3AF";    // gray (You)
-    const COLOR_AI = "#10B981";      // emerald (AI)
-    const COLOR_TOOL = "#F59E0B";    // amber (tool)
-    const COLOR_SILENCE = "#2D3748"; // subtle slate
+  const COLOR_USER = "#9CA3AF";    // gray (You)
+  const COLOR_AI = "#10B981";      // emerald (AI)
+  const COLOR_TOOL = "#F59E0B";    // amber (tool)
+  const COLOR_SILENCE = "#2D3748"; // subtle slate
+  let prevToolActive = false;
 
     const render = () => {
       const now = performance.now();
@@ -157,8 +172,9 @@ export default function WaveformVisualizer({
 
           // State decision: prefer explicit flags, fall back to RMS
           const VOICE_THRESHOLD = 0.04;
+          const toolActive = isToolRunningRef.current;
           let state: State = "silence";
-          if (isToolRunningRef.current) state = "tool";
+          if (toolActive) state = "tool";
           else if (isUserSpeakingRef.current || userR > VOICE_THRESHOLD)
             state = "user";
           else if (isAiSpeakingRef.current || aiR > VOICE_THRESHOLD) state = "ai";
@@ -174,46 +190,54 @@ export default function WaveformVisualizer({
             barH = Math.max(2, Math.floor(maxBarH * 0.35));
           }
 
-          if (state === "tool" && wrenchPath) {
-            const iconSize = 16;
-            const iconPadding = 6;
-            const iconX = Math.max(0, width - iconSize - iconPadding);
-            const iconY = Math.max(2, sliceH * 0.2);
-            const iconCenterX = iconX + iconSize / 2;
-            const lineStartY = iconY + iconSize + 2;
+          const isTool = state === "tool";
+          const toolStarted = toolActive && !prevToolActive;
 
-            const clearX = Math.max(0, iconX - 1);
-            const clearW = Math.min(
-              width - clearX,
-              iconSize + iconPadding + 1
-            );
-            ctx.clearRect(clearX, 0, clearW, sliceH);
+          if (isTool) {
+            const barX = Math.max(0, width - 1);
 
-            ctx.save();
-            ctx.translate(iconX, iconY);
-            const scale = iconSize / 24;
-            ctx.scale(scale, scale);
-            ctx.strokeStyle = COLOR_TOOL;
-            ctx.lineWidth = 1.8 / scale;
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
-            ctx.stroke(wrenchPath);
-            ctx.restore();
+            if (toolStarted && wrenchPath) {
+              const iconSize = 16;
+              const iconPadding = 6;
+              const iconX = Math.max(0, width - iconSize - iconPadding);
+              const iconY = Math.max(2, sliceH * 0.2);
+              const iconCenterX = iconX + iconSize / 2;
+              const clearX = Math.max(0, iconX - 1);
+              const clearW = Math.min(
+                width - clearX,
+                iconSize + iconPadding + 2
+              );
 
-            ctx.strokeStyle = COLOR_TOOL;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(iconCenterX, lineStartY);
-            ctx.lineTo(iconCenterX, axisY);
-            ctx.stroke();
-          } else if (state === "tool") {
-            ctx.strokeStyle = COLOR_TOOL;
-            ctx.lineWidth = 2;
-            const x = Math.max(0, width - 1);
-            ctx.beginPath();
-            ctx.moveTo(x, Math.max(0, sliceH * 0.2));
-            ctx.lineTo(x, axisY);
-            ctx.stroke();
+              ctx.clearRect(clearX, 0, clearW, sliceH);
+
+              ctx.save();
+              ctx.translate(iconX, iconY);
+              const scale = iconSize / 24;
+              ctx.scale(scale, scale);
+              ctx.strokeStyle = COLOR_TOOL;
+              ctx.lineWidth = 1.8 / scale;
+              ctx.lineCap = "round";
+              ctx.lineJoin = "round";
+              ctx.stroke(wrenchPath);
+              ctx.restore();
+
+              ctx.strokeStyle = COLOR_TOOL;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(iconCenterX, iconY + iconSize + 2);
+              ctx.lineTo(iconCenterX, axisY);
+              ctx.stroke();
+            } else if (toolStarted) {
+              ctx.strokeStyle = COLOR_TOOL;
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(barX, Math.max(2, sliceH * 0.2));
+              ctx.lineTo(barX, axisY);
+              ctx.stroke();
+            }
+            // keep timeline continuity with a subtle column so we don't leave gaps
+            ctx.fillStyle = COLOR_SILENCE;
+            ctx.fillRect(barX, Math.max(0, sliceH - 2), 1, 2);
           } else {
             let color = COLOR_SILENCE;
             if (state === "user") color = COLOR_USER;
@@ -227,6 +251,7 @@ export default function WaveformVisualizer({
 
           pxAccumulator -= 1;
           didDraw = true;
+          prevToolActive = toolActive;
         }
       }
 

@@ -1,1 +1,3 @@
-Please run npm install from the frontend folder to start
+
+
+Use playwright to take a screenshot of the UI after each UI change to make sure it looks as expected. 
