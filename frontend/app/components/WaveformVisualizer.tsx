@@ -52,7 +52,7 @@ export default function WaveformVisualizer({
       const axisY = height - axisBottomPad;
 
       // baseline
-      ctx.strokeStyle = "#6b7280";
+      ctx.strokeStyle = "#B8997A";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, axisY);
@@ -70,7 +70,7 @@ export default function WaveformVisualizer({
         const x = Math.round(width * p);
 
         // tick
-        ctx.strokeStyle = "#6b7280";
+        ctx.strokeStyle = "#B8997A";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x, axisY);
@@ -79,7 +79,7 @@ export default function WaveformVisualizer({
 
         // label - adjust alignment for edge labels to prevent clipping
         const label = secsAgo === 0 ? "now" : `${secsAgo}s`;
-        ctx.fillStyle = "#9ca3af";
+        ctx.fillStyle = "#E8D5C4";
         
         // Right edge (now): align right
         if (secsAgo === 0) {
@@ -132,9 +132,9 @@ export default function WaveformVisualizer({
 
     // Colors to match legend
   const COLOR_USER = "#9CA3AF";    // gray (You)
-  const COLOR_AI = "#10B981";      // emerald (AI)
-  const COLOR_TOOL = "#F59E0B";    // amber (tool)
-  const COLOR_SILENCE = "#2D3748"; // subtle slate
+  const COLOR_AI = "#FFB347";      // warm orange (AI)
+  const COLOR_TOOL = "#FFD700";    // golden (tool)
+  const COLOR_SILENCE = "#5D4037"; // warm brown
   let prevToolActive = false;
 
     const render = () => {

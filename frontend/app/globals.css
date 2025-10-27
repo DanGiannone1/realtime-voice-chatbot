@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --warm-bg-primary: #2D1810;
+  --warm-bg-secondary: #3D2415;
+  --warm-bg-panel: #4A2C1A;
+  --warm-accent-primary: #E88D3E;
+  --warm-accent-secondary: #F4A261;
+  --warm-accent-bright: #FFB347;
+  --warm-text-primary: #FFF8F0;
+  --warm-text-secondary: #E8D5C4;
+  --warm-text-muted: #B8997A;
+  --warm-border: #5D4037;
+  --warm-coral: #FF7F6B;
+  --warm-rose: #E76F51;
+  --warm-golden: #FFD700;
+}

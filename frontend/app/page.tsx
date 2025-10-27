@@ -557,7 +557,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex h-screen gap-6 bg-black p-6 text-white">
+    <main className="flex h-screen gap-6 p-6" style={{ background: "linear-gradient(135deg, #2D1810 0%, #3D2415 50%, #4A2C1A 100%)", color: "#FFF8F0" }}>
       {/* Hidden audio element */}
       <audio ref={audioElementRef} autoPlay />
 
@@ -568,13 +568,13 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             <h1
               className="text-3xl font-bold tracking-tight"
-              style={{ color: "#059669" }}
+              style={{ color: "#FFD700" }}
             >
               Agent Command Center
             </h1>
             <div className="flex items-center gap-2 text-sm">
-              <Sparkles className="h-4 w-4" style={{ color: "#10b981" }} />
-              <p className="text-slate-400">{status}</p>
+              <Sparkles className="h-4 w-4" style={{ color: "#FFB347" }} />
+              <p style={{ color: "#E8D5C4" }}>{status}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -584,8 +584,8 @@ export default function Home() {
               className="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white shadow-[0_2px_4px_rgba(0,0,0,0.5)] transition-all duration-200 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               style={{
                 background: isConnected
-                  ? "#ef4444"
-                  : "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)",
+                  ? "#DC2626"
+                  : "linear-gradient(135deg, #E88D3E 0%, #F4A261 100%)",
               }}
             >
               {isConnected ? (
@@ -606,8 +606,8 @@ export default function Home() {
               style={{
                 background:
                   selectedTimeRange === "1m"
-                    ? "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)"
-                    : "#1B3A4B",
+                    ? "linear-gradient(135deg, #E88D3E 0%, #F4A261 100%)"
+                    : "#5D4037",
                 opacity: selectedTimeRange === "1m" ? 1 : 0.75,
               }}
             >
@@ -619,8 +619,8 @@ export default function Home() {
               style={{
                 background:
                   selectedTimeRange === "3m"
-                    ? "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)"
-                    : "#1B3A4B",
+                    ? "linear-gradient(135deg, #E88D3E 0%, #F4A261 100%)"
+                    : "#5D4037",
                 opacity: selectedTimeRange === "3m" ? 1 : 0.75,
               }}
             >
@@ -632,8 +632,8 @@ export default function Home() {
               style={{
                 background:
                   selectedTimeRange === "5m"
-                    ? "linear-gradient(135deg, #1B4965 0%, #1F7A8C 100%)"
-                    : "#1B3A4B",
+                    ? "linear-gradient(135deg, #E88D3E 0%, #F4A261 100%)"
+                    : "#5D4037",
                 opacity: selectedTimeRange === "5m" ? 1 : 0.75,
               }}
             >
@@ -644,12 +644,13 @@ export default function Home() {
 
         {/* Visualization Panel */}
         <div
-          className="flex h-64 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
+          className="flex h-64 flex-col rounded-lg border p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
           style={{
-            background: "linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)",
+            background: "linear-gradient(to bottom, #3D2415 0%, #4A2C1A 100%)",
+            borderColor: "#5D4037",
           }}
         >
-          <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider text-gray-500">
+          <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-wider" style={{ color: "#B8997A" }}>
             <span>Audio Visualization</span>
             <span>Waveform</span>
           </div>
@@ -671,17 +672,17 @@ export default function Home() {
             />
           </div>
           <div className="mt-3 flex items-center justify-end text-sm">
-            <div className="flex gap-4 text-xs text-gray-400">
+            <div className="flex gap-4 text-xs" style={{ color: "#E8D5C4" }}>
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-gray-600"></div>
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "#9CA3AF" }}></div>
                 <span>You</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "#FFB347" }}></div>
                 <span>AI</span>
               </div>
               <div className="flex items-center gap-2">
-                <Wrench className="h-3 w-3 text-amber-400" />
+                <Wrench className="h-3 w-3" style={{ color: "#FFD700" }} />
                 <span>Tool Call</span>
               </div>
             </div>
@@ -690,13 +691,14 @@ export default function Home() {
 
         {/* Agent Telemetry Panel */}
         <div
-          className="flex min-h-64 flex-1 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
+          className="flex min-h-64 flex-1 flex-col rounded-lg border p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
           style={{
-            background: "linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)",
+            background: "linear-gradient(to bottom, #3D2415 0%, #4A2C1A 100%)",
+            borderColor: "#5D4037",
           }}
         >
           <h2 className="mb-4 text-xl font-semibold">Agent Telemetry</h2>
-          <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
+          <div className="flex flex-1 items-center justify-center text-sm" style={{ color: "#B8997A" }}>
             <p>
               {isConnected
                 ? "Streaming…"
@@ -708,15 +710,16 @@ export default function Home() {
 
       {/* Right Column - Conversation Transcript */}
       <div
-        className="flex w-96 flex-col rounded-lg border border-[#333333] p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
+        className="flex w-96 flex-col rounded-lg border p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)]"
         style={{
-          background: "linear-gradient(to bottom, #000000 0%, #1A1A1A 100%)",
+          background: "linear-gradient(to bottom, #3D2415 0%, #4A2C1A 100%)",
+          borderColor: "#5D4037",
         }}
       >
         <h2 className="mb-4 text-xl font-semibold">Conversation Transcript</h2>
 
         {transcript.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-gray-500">
+          <div className="flex flex-1 items-center justify-center text-sm" style={{ color: "#B8997A" }}>
             Start the conversation to see transcripts here
           </div>
         ) : (
@@ -729,22 +732,22 @@ export default function Home() {
                   className={`flex flex-col ${isAi ? "items-start" : "items-end"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-lg border p-3 shadow-[0_2px_4px_rgba(0,0,0,0.5)] ${
-                      isAi
-                        ? "border-[rgba(16,185,129,0.3)] bg-[rgba(16,185,129,0.1)]"
-                        : "border-[#333333] bg-[#374151]"
-                    }`}
+                    className="max-w-[85%] rounded-lg border p-3 shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+                    style={{
+                      borderColor: isAi ? "rgba(255, 179, 71, 0.4)" : "#5D4037",
+                      background: isAi ? "rgba(255, 179, 71, 0.15)" : "#5D4037",
+                    }}
                   >
                     <div
                       className="mb-1 flex items-center gap-1 font-mono text-xs opacity-70"
-                      style={{ color: "#9ca3af" }}
+                      style={{ color: "#E8D5C4" }}
                     >
                       {isAi && (
-                        <Sparkles className="h-5 w-5" style={{ color: "#10b981" }} />
+                        <Sparkles className="h-5 w-5" style={{ color: "#FFD700" }} />
                       )}
                       <span>{message.timestamp}</span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: "#FFF8F0" }}>
                       {message.content}
                     </p>
                   </div>
