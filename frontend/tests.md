@@ -655,11 +655,18 @@ This document outlines comprehensive testing strategies for the Realtime Voice C
 ### 7.1 WebRTC Support
 
 #### Test: Browser Support Matrix
-- **Browsers to Test**:
+- **Desktop Browsers to Test**:
   - Chrome/Chromium (latest, latest-1)
   - Firefox (latest, latest-1)
   - Safari (latest, latest-1)
   - Edge (latest, latest-1)
+- **Mobile Browsers to Test**:
+  - iOS Safari (latest, latest-1)
+  - Chrome Mobile (Android, latest)
+  - Firefox Mobile (Android, latest)
+  - Samsung Internet (latest)
+
+**Note**: Mobile browsers have different WebRTC implementations and stricter security policies for microphone access. Test microphone permissions, audio playback, and connection stability on mobile devices.
 
 #### Test: WebRTC Feature Detection
 - **Test Cases**:
@@ -688,7 +695,7 @@ This document outlines comprehensive testing strategies for the Realtime Voice C
 - **Purpose**: Test React components and utilities in isolation
 - **Setup**:
   ```bash
-  npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom
+  npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom @types/jest ts-jest
   ```
 
 #### E2E Tests
